@@ -1,0 +1,231 @@
+const config = require('./config');
+const WebSocket = require('ws').WebSocket;
+const protobuf = require("protobufjs");
+let protobufRoot = null;
+
+const ws = new WebSocket(config['marketDataFeedWsUrl'], {
+  headers: {
+    "Api-Version": "2.0",
+    "Authorization": "Bearer " + config['bearerAccessToken']
+  },
+  followRedirects: true
+});
+
+ws.on('open', function open() {
+  console.log('connected');
+
+  setTimeout(function timeout() {
+    const data = {
+      guid: "someguid",
+      method: "sub",
+      data: {
+        mode: "full",
+        instrumentKeys: ["NSE_INDEX|Nifty Bank"]
+      }
+    }
+    ws.send(Buffer.from(JSON.stringify(data)))
+  }, 1000);
+});
+
+ws.on('close', function close() {
+  console.log('disconnected');
+});
+
+function buf2long(buf) {
+    var b = new Uint8Array(buf),
+        val = 0,
+        len = b.length;
+
+    for(var i=0, j=len-1; i<len; i++, j--) {
+        val += b[j] << (i*8);
+    }
+
+    return val;
+}
+
+function splitPackets(bin) {
+    // number of packets
+    var num = buf2long(bin.slice(0, 2)),
+        j = 2,
+        packets = [];
+
+    for(var i=0; i<num; i++) {
+        // first two bytes is the packet length
+        var size = buf2long(bin.slice(j, j+2)),
+            packet = bin.slice(j+2, j+2+size);
+
+        packets.push(packet);
+
+        j += 2 + size;
+    }
+
+    return packets;
+}
+var NseCM = 1,
+		NseFO = 2,
+		NseCD = 3,
+		BseCM = 4,
+		BseFO = 5,
+		BseCD = 6,
+		McxFO = 7,
+		McxSX = 8,
+		Indices = 9;
+function parseBinary(binpacks) {
+    var packets = splitPackets(binpacks),
+        ticks = [];
+
+    for(var n=0; n<packets.length; n++) {
+        var bin = packets[n],
+            instrument_token = buf2long(bin.slice(0, 4)),
+            segment = instrument_token & 0xff;
+
+        var tradable = true;
+        if (segment === Indices) tradable = false;
+
+        // Add price divisor based on segment
+        var divisor = 100.0;
+        if (segment === NseCD) { 
+            divisor = 10000000.0;
+
+        } else if (segment == BseCD) {
+            divisor = 10000.0;
+        }
+
+        // Parse LTP
+        if (bin.byteLength === 8) {
+            ticks.push({
+                tradable: tradable,
+                mode: modeLTP,
+                instrument_token: instrument_token,
+                last_price: buf2long(bin.slice(4,8)) / divisor
+            });
+        // Parse indices quote and full mode
+        } else if (bin.byteLength === 28 || bin.byteLength === 32) {
+            var mode = modeQuote;
+            if (bin.byteLength === 32) mode = modeFull;
+
+            var tick = {
+                tradable: tradable,
+                mode: mode,
+                instrument_token: instrument_token,
+                last_price: buf2long(bin.slice(4,8)) / divisor,
+                ohlc: {
+                    high: buf2long(bin.slice(8, 12)) / divisor,
+                    low: buf2long(bin.slice(12, 16)) / divisor,
+                    open: buf2long(bin.slice(16, 20)) / divisor,
+                    close: buf2long(bin.slice(20, 24)) / divisor
+                },
+                change: buf2long(bin.slice(24, 28))
+            };
+
+            // Compute the change price using close price and last price
+            if(tick.ohlc.close != 0) {
+                tick.change = (tick.last_price - tick.ohlc.close) * 100 / tick.ohlc.close;
+            }
+
+            // Full mode with timestamp in seconds
+            if (bin.byteLength === 32) {
+                tick.exchange_timestamp = null;
+                var timestamp = buf2long(bin.slice(28, 32));
+                if (timestamp) tick.exchange_timestamp = new Date(timestamp * 1000);
+            }
+
+            ticks.push(tick);
+        } else if (bin.byteLength === 44 || bin.byteLength === 184) {
+            var mode = modeQuote;
+            if (bin.byteLength === 184) mode = modeFull;
+
+            var tick = {
+                tradable: tradable,
+                mode: mode,
+                instrument_token: instrument_token,
+                last_price: buf2long(bin.slice(4, 8)) / divisor,
+                last_traded_quantity: buf2long(bin.slice(8, 12)),
+                average_traded_price: buf2long(bin.slice(12, 16)) / divisor,
+                volume_traded: buf2long(bin.slice(16, 20)),
+                total_buy_quantity: buf2long(bin.slice(20, 24)),
+                total_sell_quantity: buf2long(bin.slice(24, 28)),
+                ohlc: {
+                    open: buf2long(bin.slice(28, 32)) / divisor,
+                    high: buf2long(bin.slice(32, 36)) / divisor,
+                    low: buf2long(bin.slice(36, 40)) / divisor,
+                    close: buf2long(bin.slice(40, 44)) / divisor
+                }
+            };
+
+            // Compute the change price using close price and last price
+            if (tick.ohlc.close != 0) {
+                tick.change = (tick.last_price - tick.ohlc.close) * 100 / tick.ohlc.close;
+            }
+
+            // Parse full mode
+            if (bin.byteLength === 184) {
+                // Parse last trade time
+                tick.last_trade_time = null;
+                var last_trade_time = buf2long(bin.slice(44, 48));
+                if (last_trade_time) tick.last_trade_time = new Date(last_trade_time * 1000);
+
+                // Parse timestamp
+                tick.exchange_timestamp = null;
+                var timestamp = buf2long(bin.slice(60, 64));
+                if (timestamp) tick.exchange_timestamp = new Date(timestamp * 1000);
+
+                // Parse OI
+                tick.oi = buf2long(bin.slice(48, 52));
+                tick.oi_day_high = buf2long(bin.slice(52, 56));
+                tick.oi_day_low = buf2long(bin.slice(56, 60));
+                tick.depth = {
+                    buy: [],
+                    sell: []
+                };
+
+                var s = 0, depth = bin.slice(64, 184);
+                for (var i=0; i<10; i++) {
+                    s = i * 12;
+                    tick.depth[i < 5 ? "buy" : "sell"].push({
+                        quantity:	buf2long(depth.slice(s, s + 4)),
+                        price:		buf2long(depth.slice(s + 4, s + 8)) / divisor,
+                        orders: 	buf2long(depth.slice(s + 8, s + 10))
+                    });
+                }
+            }
+
+            ticks.push(tick);
+        }
+    }
+
+    return ticks;
+}
+
+ws.on('message', function message(data) {
+    console.log(data);
+    // var d = parseBinary(e)
+    // if(e.data instanceof ArrayBuffer) {
+    //     // Trigger on message event when binary message is received
+    //     trigger("message", [e.data]);
+    //     if(e.data.byteLength > 2) {
+    //         var d = parseBinary(e.data);
+    //         if(d) trigger("ticks", [d]);
+    //     }
+    // } else {
+    //     parseTextMessage(e.data)
+    // }
+   console.log(JSON.stringify(decodeProtobuf(data)));
+});
+
+async function initProtobuf() {
+  protobufRoot = await protobuf.load(__dirname + "/MarketDataFeed.proto");
+  console.log("Protobuf part initialization complete");
+}
+
+function decodeProtobuf(buffer) {
+  if (protobufRoot == null) {
+    console.warn("Protobuf part not initialized yet!");
+    return null;
+  }
+
+  const FeedResponse = protobufRoot.lookupType("com.upstox.marketdatafeeder.rpc.proto.FeedResponse");
+  return FeedResponse.decode(buffer);
+}
+
+initProtobuf();
