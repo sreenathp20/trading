@@ -59,7 +59,7 @@ nb = a.alice.get_instrument_by_symbol('INDICES','NIFTY BANK')
 fo = a.alice.get_instrument_for_fno(exch="NFO",symbol='BANKNIFTY', expiry_date="2023-04-27", is_fut=False,strike=None, is_CE=False)
 
 all_sensex_scrips = a.alice.search_instruments('NSE', 'NIFTY')
-o = a.alice.place_order(transaction_type = TransactionType.Buy,
+o = a.alice.place_order(transaction_type = TransactionType.Buy, 
                      #instrument = a.alice.get_instrument_by_symbol('INDICES', 'NIFTY BANK'),
                      instrument = fo[94],
                      quantity = 25,
