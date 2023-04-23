@@ -1,6 +1,13 @@
 {
     "version": "0.2.0",
     "configurations": [
+    {
+        "name": "Attach to Chrome",
+        "port": 4200,
+        "request": "launch",
+        "type": "chrome",
+        "webRoot": "${workspaceFolder}"
+    },
         {
             "name": "Python: Django",
             "type": "python",

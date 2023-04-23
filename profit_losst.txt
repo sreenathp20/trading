@@ -1,0 +1,20 @@
+{'loss': 57, 'profit': 64, 'holiday': 58, 'total': -2056.899999999994}
+
+{'loss': 72, 'profit': 49, 'holiday': 58, 'total': -2597.9500000000116} strip off at -200
+
+{'loss': 58, 'profit': 63, 'holiday': 58, 'total': -1576.100000000013} strip off at -500
+
+{'loss': 88, 'profit': 33, 'holiday': 58, 'total': -1866.200000000019} strip off at -100
+
+{'loss': 99, 'profit': 22, 'holiday': 58, 'total': -2001.9000000000087} strip off at -50
+
+=============================================================================================
+
+{'loss': 94, 'profit': 32, 'holiday': 61, 'total': 3287.2999999998865} -69
+{'loss': 101, 'profit': 25, 'holiday': 65, 'total': 1697.1500000002707} -49
+{'loss': 82, 'profit': 44, 'holiday': 65, 'total': 3920.0999999999476} -99
+{'loss': 87, 'profit': 39, 'holiday': 65, 'total': 1073.1000000000713} -119
+{'loss': 89, 'profit': 37, 'holiday': 65, 'total': 3156.05000000001} -89
+{'loss': 86, 'profit': 40, 'holiday': 65, 'total': 1793.2000000000771} - 109
+{'loss': 83, 'profit': 43, 'holiday': 65, 'total': 3325.5999999999913} -100
+{'loss': 82, 'profit': 44, 'holiday': 65, 'total': 3920.0999999999476} -99

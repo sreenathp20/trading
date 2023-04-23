@@ -8,11 +8,11 @@ import datetime
 class Upstox:
     def __init__(self):
         self.BASE_URL = 'https://api-v2.upstox.com'
-        self.CODE = 'xiUrks'
+        self.CODE = 'HntAGZ'
         self.API_KEY = 'a33d9f29-4518-4b91-8a0f-2dc149061507'
         self.API_SECRET = '0rftxdw8by'
         self.REDIRECT_URI = 'http://127.0.0.1'
-        self.ALPHA = 0.1
+        self.ALPHA = 0.9
 
         pass
 
@@ -142,3 +142,235 @@ class Upstox:
         df.to_excel(r'nifty50.xlsx', sheet_name='Your sheet name', index=False)
 
         pass
+
+    def backTestClose(self, collection, start, end, cnt):
+        data = mongo.readAll(collection, start, end)
+        collection = collection+'_Close'
+        if len(data) > 0:
+            prev = data[0]
+            prev_direction = ''
+            first = True
+            i = 2
+            for d in data[1:]:
+                if i < len(data):
+                    next = data[i]
+                if prev['close'] > d['close']:
+                    direction = 'DOWN'
+                else:
+                    direction = 'UP'
+                #next.pop("_id")
+                d['next_date'] = next['date']
+                d['next_open'] = next['open']
+                d['next_high'] = next['high']
+                d['next_low'] = next['low']
+                d['next_close'] = next['close']
+                if first:
+                    prev_direction = direction
+                    first = False
+                    self.buyOrSellStock(d, direction, 'BUY', collection, cnt)
+                if direction != prev_direction:
+                    self.buyOrSellStock(d, prev_direction, 'SELL', collection, cnt)
+                    cnt += 1
+                    self.buyOrSellStock(d, direction, 'BUY', collection, cnt)
+                cnt += 1
+                i += 1
+                prev_direction = direction
+                prev = d
+            self.buyOrSellStock(d, direction, 'SELL', collection, cnt)
+            cnt += 1
+        return cnt
+    
+    def getMovingAverage(self, data):
+        df_data = {"date": [], "open": [], "high": [], "low": [], "close": [], "ema_open": [], "ema_close": []}
+        for d in data:
+            df_data["date"].append(d["date"])
+            df_data["open"].append(d["open"])
+            df_data["high"].append(d["high"])
+            df_data["low"].append(d["low"])
+            df_data["close"].append(d["close"])
+            df_data["ema_open"].append(d["ema_open"])
+            df_data["ema_close"].append(d["ema_close"])
+        df = pd.DataFrame(df_data)
+        rolling = 3
+        df['ema_close_ma3'] = df['ema_close'].rolling(rolling).mean()
+        res = []
+        for i in range(len(df)):
+            result = {"date": df["date"][i], "open": df["open"][i], "high": df["high"][i], "low": df["low"][i], "close": df["close"][i], "ema_open": df["ema_open"][i], "ema_close": df["ema_close"][i], "ema_close_ma3": df["ema_close_ma3"][i] if i >= rolling else df["ema_close"][i]}
+            res.append(result)
+        pass
+        return res
+    
+    def getLastBuy(self, collection, start, end):
+        data = mongo.descending(collection, start, end, "date")
+        return data
+    
+    def getDirection(self, d, prev, original=False):
+        if original:
+            if prev['close'] > d['close']:
+            #if prev['close'] > d['close']:
+                direction = 'DOWN'
+            else:
+                direction = 'UP'
+        else:
+            if prev['ema_close_ma3'] > d['ema_close_ma3']:
+            #if prev['close'] > d['close']:
+                direction = 'DOWN'
+            else:
+                direction = 'UP'
+        return direction
+
+
+    def backTest(self, collection, start, end, limit):
+        #start = datetime.datetime(2023, 1, 2)
+        #end = datetime.datetime(2023, 1, 3)
+        data = mongo.readAll(collection, start, end)
+        #collection += 'MA10'
+        if len(data) > 0:
+            data = self.getMovingAverage(data)
+            prev = data[0]
+            prev_direction = ''
+            first = True
+            i = 2
+            tot_pl = 0
+            step = 5
+            step_break = False
+            neg_cnt = 0
+            neg_accu = 0
+            for idx in range(1,len(data)):
+                d = data[idx]
+                # if i < len(data):
+                #     next = data[i]
+                direction = self.getDirection(d, prev, True)
+                if prev['ema_close_ma3'] > d['ema_close_ma3']:
+                #if prev['close'] > d['close']:
+                    direction = 'DOWN'
+                else:
+                    direction = 'UP'
+                #next.pop("_id")
+                # d['next_date'] = next['date']
+                # d['next_open'] = next['open']
+                # d['next_high'] = next['high']
+                # d['next_low'] = next['low']
+                # d['next_close'] = next['close']
+                # d['next_ema_close_ma3'] = next['ema_close_ma3']
+                if first:
+                    prev_direction = direction
+                    first = False
+                    self.buyOrSellStock(d, direction, 'BUY', collection)
+                    prev_buy = d
+                if direction != prev_direction:
+                    dif = d['date'] - prev_buy['date']
+                    min = dif.total_seconds()/60
+                    #last_buy = self.getLastBuy('transactions_'+collection, start, end)
+                    if prev_buy['direction'] == 'UP':
+                        future_pl = d['close'] - prev_buy['close']
+                    if prev_buy['direction'] == 'DOWN':
+                        future_pl = prev_buy['close'] - d['close']
+                    
+                    neg_limit = -30
+                    
+                    if min > 0 and (future_pl > 100 or future_pl < neg_limit):
+                        if future_pl < neg_limit:
+                            neg_cnt += 1
+                            neg_accu += future_pl
+                        else:
+                            neg_cnt = 0
+                    #if min > 1 and (future_pl > 0 or future_pl < -49):  
+                        tot_pl += future_pl                      
+                        self.buyOrSellStock(d, prev_direction, 'SELL', collection)
+                        idx += step
+                        if neg_cnt >= 2:
+                            idx += 2 * step
+                            neg_cnt = 0
+                        # if neg_cnt >= 3:
+                        #     idx += 2 * step
+                        #     if neg_accu < -75:
+                        #         step_break = True
+                        #         break
+                        #     neg_cnt = 0
+                        if idx >= len(data):
+                            step_break = True
+                            break
+                        d = data[idx]
+                        direction = self.getDirection(d, data[idx-1], True)
+                        prev_direction = direction
+                        self.buyOrSellStock(d, direction, 'BUY', collection)
+                        prev_buy = d
+                    # if tot_pl < -49:
+                    #     direction = prev_direction
+                    #     break
+                #cnt += 1
+                i += 1
+                #prev_direction = direction
+                prev = d
+            if not step_break:
+                self.buyOrSellStock(d, direction, 'SELL', collection)
+        return limit
+
+
+        pass
+
+    def buyOrSellStock(self, data, direction, type, collection):
+        data['direction'] = direction
+        data['type'] = type
+        if "_id" in data:
+            data.pop("_id")
+        mongo.insertMany('transactions_'+collection, [data])
+        pass
+
+    def getProfitOrLoss(self, collection, start, end, strip):
+        #start = datetime.datetime(2023, 1, 2)
+        #end = datetime.datetime(2023, 1, 3)
+        data = mongo.readAll(collection, start, end)
+        points = 0
+        no_trx = len(data)/2
+        p_l = {"p": 0, "l": 0}
+        diff = []
+        for i in range(0, len(data), 2):
+            buy = data[i]
+            sell = data[i+1]
+            direction = buy['direction']
+            addition = 0
+            if direction == 'UP':
+                addition = sell['close'] - buy['close']
+            else:
+                addition = buy['close'] - sell['close']
+            dif = sell['date'] - buy['date']
+            #print(addition, " addition")
+            min = dif.total_seconds()/60
+            diff.append(min)
+
+            points += addition
+            print(addition, " addition", min, buy['date'], sell['date'], direction)
+            if addition > 0:
+                p_l["p"] += 1
+            elif addition < 0:
+                p_l["l"] += 1
+            # if points < strip:
+            #     break
+            #print(i)
+        print(points, " points ", no_trx, p_l, start)
+        return points
+    
+    def insertProfitOrLoss(self, data):
+        if len(data["profit"]) > 0:
+            mongo.insertMany('profit_or_loss', data["profit"])
+        if len(data["loss"]) > 0:
+            mongo.insertMany('profit_or_loss', data["loss"])
+
+    def createDataFrame(self):
+        start = datetime.datetime(2011, 10, 17)
+        end = datetime.datetime(2023, 4, 28)
+        data = mongo.readAll("nseindexniftybankDay", start, end)
+        df_data = {"date": [], "open": [], "high": [], "low": [], "close": []}
+        for d in data:
+            df_data["date"].append(d["date"])
+            df_data["open"].append(d["open"])
+            df_data["high"].append(d["high"])
+            df_data["low"].append(d["low"])
+            df_data["close"].append(d["close"])
+        df = pd.DataFrame(df_data)
+        df.to_csv("out_day.csv")
+        pass
+
+

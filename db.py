@@ -16,9 +16,18 @@ class MongoDb:
         col.insert_many(data)
 
     def readAll(self, collection, start, end):
-        print("hello 123")
+        #print("hello 123")
         col = self.db[collection]
         data = col.find({"date": {"$gte": start, "$lt": end}})
+        res = []
+        for d in data:
+            res.append(d)
+        return res
+    
+    def descending(self, collection, start, end, field):
+        #print("hello 123")
+        col = self.db[collection]
+        data = col.find({"date": {"$gte": start, "$lt": end}, "type": "BUY"}).sort(field, -1)
         res = []
         for d in data:
             res.append(d)
