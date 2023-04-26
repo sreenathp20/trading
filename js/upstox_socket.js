@@ -56,7 +56,9 @@ ws.on('message', function message(data) {
     // }
     //console.log("=======================================================");
     const data1 = decodeProtobuf(data);
+    
     var ohlc = data1['feeds']['NSE_INDEX|Nifty Bank']['ff']['indexFF']['marketOHLC']['ohlc'];
+    //console.log(JSON.stringify(ohlc));
     var ohlc_1min = ohlc[1];
     for(let i = 0; i < ohlc.length; i++) {
       // console.log(JSON.stringify(ohlc[i]));

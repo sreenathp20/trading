@@ -33,3 +33,19 @@ class MongoDb:
             res.append(d)
         return res
     
+    def readTickData(self, collection, start, end):
+        col = self.db[collection]
+        data = col.find({"ts": {"$gte": start, "$lt": end}}).sort("ts", -1)
+        res = []
+        for d in data:
+            res.append(d)
+        return res
+    
+    def readLatestTnx(self, collection, start, end):
+        col = self.db['tnx_'+collection]
+        data = col.find({"ts": {"$gte": start, "$lt": end}}).sort("ts", -1)
+        res = []
+        for d in data:
+            res.append(d)
+        return res
+    

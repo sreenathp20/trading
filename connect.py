@@ -8,7 +8,7 @@ import datetime
 class Upstox:
     def __init__(self):
         self.BASE_URL = 'https://api-v2.upstox.com'
-        self.CODE = 'HntAGZ'
+        self.CODE = 'ZJj3Ip'
         self.API_KEY = 'a33d9f29-4518-4b91-8a0f-2dc149061507'
         self.API_SECRET = '0rftxdw8by'
         self.REDIRECT_URI = 'http://127.0.0.1'
@@ -218,9 +218,67 @@ class Upstox:
             else:
                 direction = 'UP'
         return direction
-
-
+    
     def backTest(self, collection, start, end, limit):
+        #start = datetime.datetime(2023, 1, 2)
+        #end = datetime.datetime(2023, 1, 3)
+        data = mongo.readAll(collection, start, end)
+        #collection += 'MA10'
+        if len(data) > 0:
+            data = self.getMovingAverage(data)
+            prev = data[0]
+            prev_direction = ''
+            first = True
+            i = 2
+            tot_pl = 0
+            for d in data[1:]:
+                # if i < len(data):
+                #     next = data[i]
+                if prev['ema_close_ma3'] > d['ema_close_ma3']:
+                #if prev['close'] > d['close']:
+                    direction = 'DOWN'
+                else:
+                    direction = 'UP'
+                #next.pop("_id")
+                # d['next_date'] = next['date']
+                # d['next_open'] = next['open']
+                # d['next_high'] = next['high']
+                # d['next_low'] = next['low']
+                # d['next_close'] = next['close']
+                # d['next_ema_close_ma3'] = next['ema_close_ma3']
+                if first:
+                    prev_direction = direction
+                    first = False
+                    self.buyOrSellStock(d, direction, 'BUY', collection)
+                    prev_buy = d
+                if direction != prev_direction:
+                    dif = d['date'] - prev_buy['date']
+                    min = dif.total_seconds()/60
+                    #last_buy = self.getLastBuy('transactions_'+collection, start, end)
+                    if prev_buy['direction'] == 'UP':
+                        future_pl = d['close'] - prev_buy['close']
+                    if prev_buy['direction'] == 'DOWN':
+                        future_pl = prev_buy['close'] - d['close']
+                    
+                    
+                    if min > 0 and (future_pl > 0 or future_pl < -99):  
+                        tot_pl += future_pl                      
+                        self.buyOrSellStock(d, prev_direction, 'SELL', collection)
+                        prev_direction = direction
+                        self.buyOrSellStock(d, direction, 'BUY', collection)
+                        prev_buy = d
+                    if tot_pl < -49:
+                        direction = prev_direction
+                        break
+                #cnt += 1
+                i += 1
+                #prev_direction = direction
+                prev = d
+            self.buyOrSellStock(d, direction, 'SELL', collection)
+        return limit
+
+
+    def backTest2(self, collection, start, end, limit):
         #start = datetime.datetime(2023, 1, 2)
         #end = datetime.datetime(2023, 1, 3)
         data = mongo.readAll(collection, start, end)
@@ -241,11 +299,11 @@ class Upstox:
                 # if i < len(data):
                 #     next = data[i]
                 direction = self.getDirection(d, prev, True)
-                if prev['ema_close_ma3'] > d['ema_close_ma3']:
-                #if prev['close'] > d['close']:
-                    direction = 'DOWN'
-                else:
-                    direction = 'UP'
+                # if prev['ema_close_ma3'] > d['ema_close_ma3']:
+                # #if prev['close'] > d['close']:
+                #     direction = 'DOWN'
+                # else:
+                #     direction = 'UP'
                 #next.pop("_id")
                 # d['next_date'] = next['date']
                 # d['next_open'] = next['open']
@@ -315,7 +373,7 @@ class Upstox:
         data['type'] = type
         if "_id" in data:
             data.pop("_id")
-        mongo.insertMany('transactions_'+collection, [data])
+        mongo.insertMany('tnx_'+collection, [data])
         pass
 
     def getProfitOrLoss(self, collection, start, end, strip):

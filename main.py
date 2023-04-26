@@ -6,10 +6,10 @@ from datetime import datetime, timedelta
 
 u = Upstox()
 
-start = datetime(2023, 4, 1)
-limit = 31
+start = datetime(2023, 4, 25)
+limit = 1
 # start = datetime(2022, 10, 16)
-# limit = 191
+# limit = 200
 
 
 
@@ -30,6 +30,7 @@ for i in range(limit):
     end = start + timedelta(days=1)
     print(start, end)
     limit = u.backTest('nseindexniftybankPoint9', start, end, -49)
+    #limit = u.backTest2('nseindexniftybankPoint9', start, end, -79)
     points = u.getProfitOrLoss('transactions_nseindexniftybankPoint9', start, end,-49)
     data = {"profit": [], "loss": []}
     if points > 0:
