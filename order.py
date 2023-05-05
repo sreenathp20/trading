@@ -4,9 +4,16 @@ import pandas as pd
 from datetime import datetime, timedelta
 from time import sleep
 from connect import Upstox
+from pya3 import *
+from alice import AliceBlue
 
 class Order:
     def __init__(self):
+        self.strike = None
+        self.strike_ce = 43800
+        self.strike_pe = 41000
+        self.prev_tnx = ''
+        self.debug = True
         pass
 
     def checkLatestTick(self, collection, start, end):
@@ -15,6 +22,7 @@ class Order:
         return data
 
     def getData(self, collection):
+        p_l, ot = self.pAndL()
         today = datetime.today()
         daystart = datetime(year=today.year, month=today.month, 
                     day=today.day, hour=0, minute=0, second=0) 
@@ -34,41 +42,113 @@ class Order:
             if len(new_data) > len(data):
                 processed_data = self.processNewData(processed_data, new_data, alpha, rolling)
                 if len(new_data) > 3:
-                    self.trade(processed_data, collection, start, end, new_data[0])
+                    self.trade(processed_data, collection, start, end, new_data[0], p_l, ot)
                 data = new_data
                 print("new data received")
+                p_l, ot = self.pAndL()
                 sleep(30)
             sleep(1)
 
-    def buyStock(self, latest_data, direction, collection):
-        u = Upstox()
-        u.buyOrSellStock(latest_data, direction, 'BUY', collection)
-        pass  
+    def pAndL(self):
+        a = AliceBlue()
+        a.alice.get_session_id()
+        ot = a.alice.get_trade_book()
+        order = {'buy': 0, 'sell': 0}
+        if type(ot) == list:
+            for o in ot:
+                if o['Trantype'] == 'S':
+                    order['sell'] += (float(o['Price']) * o['Qty'])
+                elif o['Trantype'] == 'B':
+                    order['buy'] += (float(o['Price']) * o['Qty'])
+        else:
+            ot = []
+        p_l = order['sell'] - order['buy']
+        return p_l, ot
 
+
+    def transact(self, type, direction):
+        if type == 'BUY':
+            trans_type = TransactionType.Buy
+        else:
+            trans_type = TransactionType.Sell
+        if direction == 'DOWN':
+            is_ce = False
+            strike = self.strike_pe
+        else:
+            is_ce = True
+            strike = self.strike_ce
+        a = AliceBlue()
+        a.alice.get_session_id()
+        fo = a.alice.get_instrument_for_fno(exch="NFO",symbol='BANKNIFTY', expiry_date="2023-04-27", is_fut=False,strike=strike, is_CE=is_ce)
+        if not self.debug:
+            o = a.alice.place_order(transaction_type = trans_type, 
+                                instrument = fo,
+                                quantity = 25,
+                                order_type = OrderType.Market,
+                                product_type = ProductType.Intraday,
+                                #price = 1.0,
+                                trigger_price = None,
+                                stop_loss = None,
+                                square_off = None,
+                                trailing_sl = None,
+                                is_amo = False,
+                                order_tag='order1')
+        else:
+            o = {"msg": "order placed"}
+        print("order placed =======", trans_type, " ======= is_CE => ", is_ce)
+        return o
+
+    def buyStock(self, latest_data, direction, collection):
+        u = Upstox()        
+        u.buyOrSellStock(latest_data, direction, 'BUY', collection)
+        o = self.transact('BUY', direction)        
+        pass  
+        return o
+    
     def sellStock(self, latest_data, direction, collection):
         u = Upstox()
         u.buyOrSellStock(latest_data, direction, 'SELL', collection)
+        o = self.transact('SELL', direction)
         pass  
+        return o
 
 
-    def trade(self, processed_data, collection, start, end, latest_data):
+    def trade(self, processed_data, collection, start, end, latest_data, p_l, ot):
         direction = self.getDirection(processed_data)
-        data = mongo.readLatestTnx(collection, start, end)
+        if self.debug:
+            data = mongo.readLatestTnx(collection, start, end)
+        else:
+            data = ot
         today = datetime.today()
         dayend = datetime(year=today.year, month=today.month, 
                     day=today.day, hour=15, minute=25, second=0)
         if len(data) > 0:
             prev_tnx = data[0]
-            if self.prev_tnx and self.prev_tnx == 'SELL':
+            if self.debug:
+                trans_type = prev_tnx['type']
+                trans_code = 'SELL'
+            else:
+                trans_type = prev_tnx['Trantype']
+                trans_code = 'S'
+            if prev_tnx and trans_type == trans_code:
                 self.buyStock(latest_data, direction, collection) 
                 self.prev_tnx = 'BUY'
             else:
-                if direction != prev_tnx['direction']:
-                    self.sellStock(latest_data, prev_tnx['direction'], collection)
-                    self.prev_tnx = 'SELL'                 
+                if self.debug:
+                    prev_direction = prev_tnx['direction']
+                else:
+                    prev_direction = 'DOWN' if prev_tnx['optiontype'] == 'PE' else 'UP'
                 if latest_data["ts"]  > dayend:     
-                    self.sellStock(latest_data, prev_tnx['direction'], collection)  
-                    self.prev_tnx = 'SELL'                          
+                    self.sellStock(latest_data, prev_direction, collection)  
+                    self.prev_tnx = 'SELL'
+                    direction = prev_direction
+                    
+                if direction != prev_direction:
+                    self.sellStock(latest_data, prev_direction, collection)
+                    self.prev_tnx = 'SELL'   
+                    self.buyStock(latest_data, direction, collection) 
+                    self.prev_tnx = 'BUY'              
+                                         
         else:
             if latest_data["ts"] < dayend:
                 self.buyStock(latest_data, direction, collection)  

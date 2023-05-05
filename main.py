@@ -6,10 +6,10 @@ from datetime import datetime, timedelta
 
 u = Upstox()
 
-start = datetime(2023, 4, 25)
-limit = 1
-# start = datetime(2022, 10, 16)
-# limit = 200
+# start = datetime(2023, 5, 1)
+# limit = 31
+start = datetime(2022, 10, 25)
+limit = 220
 
 
 
@@ -20,7 +20,7 @@ limit = 1
 #u.getUserFundsAndMargin()
 #u.getPositions()
 #u.getHoldings()
-#u.historicalCandleData('nseindexniftybankPoint9', 'NSE_INDEX|Nifty Bank', '1minute', '2023-04-27', '2022-10-16' )
+#u.historicalCandleData('nseindexniftybankPoint9', 'NSE_INDEX|Nifty Bank', '1minute', '2023-05-05', '2023-05-04' )
 #u.getAllCandleData('nifty50')
 #df1 = u.getDfData('nifty50', start, end)
 #u.placeOrder()
@@ -30,8 +30,9 @@ for i in range(limit):
     end = start + timedelta(days=1)
     print(start, end)
     limit = u.backTest('nseindexniftybankPoint9', start, end, -49)
+    #limit = u.backTest5min('nseindexniftybankPoint9_5min', start, end, -49)
     #limit = u.backTest2('nseindexniftybankPoint9', start, end, -79)
-    points = u.getProfitOrLoss('transactions_nseindexniftybankPoint9', start, end,-49)
+    points = u.getProfitOrLoss('tnx_nseindexniftybankPoint9', start, end,-49)
     data = {"profit": [], "loss": []}
     if points > 0:
         cnt["profit"] += 1
@@ -45,6 +46,9 @@ for i in range(limit):
     #u.insertProfitOrLoss(data)
     print(cnt) 
     print("=============================================================")
+    #u.get5minticks('nseindexniftybankPoint9', start, end)
     start = end
+
+
     
 

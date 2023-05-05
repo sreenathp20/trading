@@ -4,11 +4,12 @@ mongo = MongoDb()
 import pandas as pd
 
 import datetime
+from des import double_exponential_smoothing
 
 class Upstox:
     def __init__(self):
         self.BASE_URL = 'https://api-v2.upstox.com'
-        self.CODE = 'ZJj3Ip'
+        self.CODE = '_6pk2x'
         self.API_KEY = 'a33d9f29-4518-4b91-8a0f-2dc149061507'
         self.API_SECRET = '0rftxdw8by'
         self.REDIRECT_URI = 'http://127.0.0.1'
@@ -191,11 +192,31 @@ class Upstox:
             df_data["ema_open"].append(d["ema_open"])
             df_data["ema_close"].append(d["ema_close"])
         df = pd.DataFrame(df_data)
+        df['des_close_p1'] = double_exponential_smoothing(df['close'], 0.9, 0.1, 1)[:-1]
+        df['des_close_p9'] = double_exponential_smoothing(df['close'], 0.9, 0.9, 1)[:-1]
         rolling = 3
         df['ema_close_ma3'] = df['ema_close'].rolling(rolling).mean()
         res = []
         for i in range(len(df)):
-            result = {"date": df["date"][i], "open": df["open"][i], "high": df["high"][i], "low": df["low"][i], "close": df["close"][i], "ema_open": df["ema_open"][i], "ema_close": df["ema_close"][i], "ema_close_ma3": df["ema_close_ma3"][i] if i >= rolling else df["ema_close"][i]}
+            result = {"date": df["date"][i], "open": df["open"][i], "high": df["high"][i], "low": df["low"][i], "close": df["close"][i], "ema_open": df["ema_open"][i], "ema_close": df["ema_close"][i], "ema_close_ma3": df["ema_close_ma3"][i] if i >= rolling else df["ema_close"][i],
+            "des_close_p1": df["des_close_p1"][i], "des_close_p9": df["des_close_p9"][i]}
+            res.append(result)
+        pass
+        return res
+    
+    def getMovingAverage5min(self, data):
+        df_data = {"date": [], "open": [], "close": []}
+        for d in data:
+            df_data["date"].append(d["date"])
+            df_data["open"].append(d["open"])
+            df_data["close"].append(d["close"])
+        df = pd.DataFrame(df_data)
+        rolling = 3
+        df['ema_close'] = df['close'].ewm(alpha=0.9).mean()
+        df['ema_close_ma3'] = df['ema_close'].rolling(rolling).mean()
+        res = []
+        for i in range(len(df)):
+            result = {"date": df["date"][i], "open": df["open"][i], "close": df["close"][i], "ema_close": df["ema_close"][i], "ema_close_ma3": df["ema_close_ma3"][i] if i >= rolling else df["ema_close"][i]}
             res.append(result)
         pass
         return res
@@ -234,7 +255,8 @@ class Upstox:
             for d in data[1:]:
                 # if i < len(data):
                 #     next = data[i]
-                if prev['ema_close_ma3'] > d['ema_close_ma3']:
+                #if prev['ema_close_ma3'] > d['ema_close_ma3']:
+                if prev['des_close_p1'] > d['des_close_p1']:
                 #if prev['close'] > d['close']:
                     direction = 'DOWN'
                 else:
@@ -262,6 +284,7 @@ class Upstox:
                     
                     
                     if min > 0 and (future_pl > 0 or future_pl < -99):  
+                    #if min > 0 and (future_pl > 0):  
                         tot_pl += future_pl                      
                         self.buyOrSellStock(d, prev_direction, 'SELL', collection)
                         prev_direction = direction
@@ -366,7 +389,63 @@ class Upstox:
         return limit
 
 
-        pass
+    def backTest5min(self, collection, start, end, limit):
+        #start = datetime.datetime(2023, 1, 2)
+        #end = datetime.datetime(2023, 1, 3)
+        data = mongo.readAll(collection, start, end)
+        #collection += 'MA10'
+        if len(data) > 0:
+            data = self.getMovingAverage5min(data)
+            prev = data[0]
+            prev_direction = ''
+            first = True
+            i = 2
+            tot_pl = 0
+            for d in data[1:]:
+                # if i < len(data):
+                #     next = data[i]
+                if prev['ema_close_ma3'] > d['ema_close_ma3']:
+                #if prev['close'] > d['close']:
+                    direction = 'DOWN'
+                else:
+                    direction = 'UP'
+                #next.pop("_id")
+                # d['next_date'] = next['date']
+                # d['next_open'] = next['open']
+                # d['next_high'] = next['high']
+                # d['next_low'] = next['low']
+                # d['next_close'] = next['close']
+                # d['next_ema_close_ma3'] = next['ema_close_ma3']
+                if first:
+                    prev_direction = direction
+                    first = False
+                    self.buyOrSellStock(d, direction, 'BUY', collection)
+                    prev_buy = d
+                if direction != prev_direction:
+                    dif = d['date'] - prev_buy['date']
+                    min = dif.total_seconds()/60
+                    #last_buy = self.getLastBuy('transactions_'+collection, start, end)
+                    if prev_buy['direction'] == 'UP':
+                        future_pl = d['close'] - prev_buy['close']
+                    if prev_buy['direction'] == 'DOWN':
+                        future_pl = prev_buy['close'] - d['close']
+                    
+                    
+                    if min > 0 and (future_pl > 0 or future_pl < -99):  
+                        tot_pl += future_pl                      
+                        self.buyOrSellStock(d, prev_direction, 'SELL', collection)
+                        prev_direction = direction
+                        self.buyOrSellStock(d, direction, 'BUY', collection)
+                        prev_buy = d
+                    if tot_pl < -49:
+                        direction = prev_direction
+                        break
+                #cnt += 1
+                i += 1
+                #prev_direction = direction
+                prev = d
+            self.buyOrSellStock(d, direction, 'SELL', collection)
+        return limit
 
     def buyOrSellStock(self, data, direction, type, collection):
         data['direction'] = direction
@@ -429,6 +508,17 @@ class Upstox:
             df_data["close"].append(d["close"])
         df = pd.DataFrame(df_data)
         df.to_csv("out_day.csv")
+        pass
+
+    def get5minticks(self, collection, start, end):
+        data = mongo.readAll(collection, start, end)
+        d = []
+        for i in range(0, len(data), 5):
+            close = data[i+4]['close'] if i + 4 < len(data) else data[len(data) - 1]['close']
+            di = {"open": data[i]['open'], 'date': data[i]['date'], 'close': close}
+            d.append(di)
+        if len(d) > 0:
+            mongo.insertMany(collection+'_5min', d)
         pass
 
 

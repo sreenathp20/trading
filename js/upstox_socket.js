@@ -56,38 +56,42 @@ ws.on('message', function message(data) {
     // }
     //console.log("=======================================================");
     const data1 = decodeProtobuf(data);
-    
+    //console.log(data1, " data1");
     var ohlc = data1['feeds']['NSE_INDEX|Nifty Bank']['ff']['indexFF']['marketOHLC']['ohlc'];
+    //console.log(data1['feeds']['NSE_INDEX|Nifty Bank']['ff']['indexFF']['marketOHLC']['ohlc'][0]['ts'], " data1['feeds']['NSE_INDEX|Nifty Bank']");
     //console.log(JSON.stringify(ohlc));
-    var ohlc_1min = ohlc[1];
-    for(let i = 0; i < ohlc.length; i++) {
-      // console.log(JSON.stringify(ohlc[i]));
-      // console.log("=======================================================");
+    if(ohlc.length > 1) {
+      var ohlc_1min = ohlc[1];
+      for(let i = 0; i < ohlc.length; i++) {
+        // console.log(JSON.stringify(ohlc[i]));
+        // console.log("=======================================================");
+      }
+      //console.log(JSON.stringify(ohlc_1min), " ohlc_1min");
+      const time = parseInt(ohlc_1min['ts']);
+      
+      var d = new Date(time);
+      //console.log(d, " d");
+      var hours = d.getHours();
+      // Minutes
+      var minutes = d.getMinutes();
+      // Seconds
+      var seconds = d.getSeconds();
+      var date = d.getDate() + '/' + (d.getMonth()+1) + '/' + d.getFullYear()+' '+hours+':'+minutes+':'+seconds;
+      // console.log(JSON.stringify(ohlc_1min));
+      // console.log(date);
+
+      //ISODate("2021-11-17T03:19:56.186Z")
+      var s = new Date(time);
+
+      if(time > prev['ts']) {
+        prev['ts'] = time;
+        s.setHours(s.getHours() + 5)
+        s.setMinutes(s.getMinutes() + 30)
+        ohlc_1min['ts'] = s;
+        db(ohlc_1min)
+      }
     }
-    //console.log(JSON.stringify(ohlc_1min));
-    const time = parseInt(ohlc_1min['ts']);
     
-    var d = new Date(time);
-    //console.log(d, " d");
-    var hours = d.getHours();
-    // Minutes
-    var minutes = d.getMinutes();
-    // Seconds
-    var seconds = d.getSeconds();
-    var date = d.getDate() + '/' + (d.getMonth()+1) + '/' + d.getFullYear()+' '+hours+':'+minutes+':'+seconds;
-    // console.log(JSON.stringify(ohlc_1min));
-    // console.log(date);
-
-    //ISODate("2021-11-17T03:19:56.186Z")
-    var s = new Date(time);
-
-    if(time > prev['ts']) {
-      prev['ts'] = time;
-      s.setHours(s.getHours() + 5)
-      s.setMinutes(s.getMinutes() + 30)
-      ohlc_1min['ts'] = s;
-      db(ohlc_1min)
-    }
     
     
     
