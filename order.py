@@ -6,6 +6,7 @@ from time import sleep
 from connect import Upstox
 from pya3 import *
 from alice import AliceBlue
+from tes import triple_exponential_smoothing_minimize, triple_exponential_smoothing
 
 class Order:
     def __init__(self):
@@ -14,6 +15,7 @@ class Order:
         self.strike_pe = 41000
         self.prev_tnx = ''
         self.debug = True
+        self.QUANTITY = 25
         pass
 
     def checkLatestTick(self, collection, start, end):
@@ -23,7 +25,8 @@ class Order:
 
     def getData(self, collection):
         p_l, ot = self.pAndL()
-        today = datetime.today()
+        #today = datetime.today()
+        today = datetime(2023,4,27)
         daystart = datetime(year=today.year, month=today.month, 
                     day=today.day, hour=0, minute=0, second=0) 
 
@@ -32,7 +35,7 @@ class Order:
         alpha = 0.9
         rolling = 3
         data = self.checkLatestTick(collection, start, end)
-        data = data[:-1]
+        #data = data[:-1]
         processed_data = self.processData(data, alpha, rolling)
         
         while True:
@@ -42,9 +45,12 @@ class Order:
             if len(new_data) > len(data):
                 processed_data = self.processNewData(processed_data, new_data, alpha, rolling)
                 if len(new_data) > 3:
-                    self.trade(processed_data, collection, start, end, new_data[0], p_l, ot)
+                    flag = self.trade(processed_data, collection, start, end, new_data[0], p_l, ot)
                 data = new_data
                 print("new data received")
+                if not flag:
+                    print("Closed for the day")
+                    break
                 p_l, ot = self.pAndL()
                 sleep(30)
             sleep(1)
@@ -79,11 +85,11 @@ class Order:
             strike = self.strike_ce
         a = AliceBlue()
         a.alice.get_session_id()
-        fo = a.alice.get_instrument_for_fno(exch="NFO",symbol='BANKNIFTY', expiry_date="2023-04-27", is_fut=False,strike=strike, is_CE=is_ce)
+        fo = a.alice.get_instrument_for_fno(exch="NFO",symbol='BANKNIFTY', expiry_date="2023-05-11", is_fut=False,strike=strike, is_CE=is_ce)
         if not self.debug:
             o = a.alice.place_order(transaction_type = trans_type, 
                                 instrument = fo,
-                                quantity = 25,
+                                quantity = self.QUANTITY,
                                 order_type = OrderType.Market,
                                 product_type = ProductType.Intraday,
                                 #price = 1.0,
@@ -111,6 +117,24 @@ class Order:
         o = self.transact('SELL', direction)
         pass  
         return o
+    
+    def getTotalPoints(self, data):
+        points = 0
+        for i in range(0, len(data), 2):
+            if i+1 < len(data):
+                buy = data[i]
+                sell = data[i+1]
+                direction = buy['direction']
+                addition = 0
+                if direction == 'UP':
+                    addition = sell['close'] - buy['close']
+                else:
+                    addition = buy['close'] - sell['close']
+                dif = sell['date'] - buy['date']
+                #print(addition, " addition")
+                min = dif.total_seconds()/60
+                points += addition
+        return points
 
 
     def trade(self, processed_data, collection, start, end, latest_data, p_l, ot):
@@ -119,6 +143,8 @@ class Order:
             data = mongo.readLatestTnx(collection, start, end)
         else:
             data = ot
+        point_data = data = mongo.readLatestTnx(collection, start, end)
+        tot_points = self.getTotalPoints(point_data)
         today = datetime.today()
         dayend = datetime(year=today.year, month=today.month, 
                     day=today.day, hour=15, minute=25, second=0)
@@ -142,12 +168,22 @@ class Order:
                     self.sellStock(latest_data, prev_direction, collection)  
                     self.prev_tnx = 'SELL'
                     direction = prev_direction
-                    
+                
+                if point_data[0]['direction'] == 'UP':
+                    future_pl = latest_data['close'] - point_data[0]['close']
+                elif point_data[0]['direction'] == 'DOWN':
+                    future_pl = point_data[0]['close'] - latest_data['close'] 
                 if direction != prev_direction:
-                    self.sellStock(latest_data, prev_direction, collection)
-                    self.prev_tnx = 'SELL'   
-                    self.buyStock(latest_data, direction, collection) 
-                    self.prev_tnx = 'BUY'              
+                    tot_points += future_pl
+                    if future_pl > 0 or future_pl < -99:
+                        self.sellStock(latest_data, prev_direction, collection)
+                        self.prev_tnx = 'SELL'   
+                        self.buyStock(latest_data, direction, collection) 
+                        self.prev_tnx = 'BUY'    
+                    if tot_points < -49:
+                        self.sellStock(latest_data, prev_direction, collection)
+                        self.prev_tnx = 'SELL'
+                        return False          
                                          
         else:
             if latest_data["ts"] < dayend:
@@ -155,10 +191,13 @@ class Order:
                 self.prev_tnx = 'BUY'        
         
         pass
+        return True
 
     def getDirection(self, processed_data):
-        cur = processed_data['ema_close_ma'][len(processed_data) - 1]
-        prev = processed_data['ema_close_ma'][len(processed_data) - 2]
+        #field = 'ema_close_ma'
+        field = 'tes_close'
+        cur = processed_data[field][len(processed_data) - 1]
+        prev = processed_data[field][len(processed_data) - 2]
         if prev > cur:
             direction = 'DOWN'
         else:
@@ -178,8 +217,15 @@ class Order:
         #processed_data = processed_data.append(df2, ignore_index = True)
         processed_data = pd.concat([processed_data, df2], ignore_index = True)
         processed_data.reset_index()        
+        processed_data['tes_close'] = self.getTripeExponential(processed_data['close'])
         pass
         return processed_data
+    
+    def getTripeExponential(self, series):
+        alpha_final, beta_final, gamma_final = triple_exponential_smoothing_minimize(series)
+        t3 = triple_exponential_smoothing(series, alpha_final, beta_final, gamma_final)
+        tes_close = pd.Series(t3[:len(series)])
+        return tes_close
 
     def processData(self, data, alpha, rolling):
         df_data = {"date": [], "open": [], "high": [], "low": [], "close": []}
@@ -192,6 +238,8 @@ class Order:
         df = pd.DataFrame(df_data)
         df['ema_close'] = df['close'].ewm(alpha=alpha).mean()
         df['ema_close_ma'] = df['close'].rolling(rolling).mean()
+        df['tes_close'] = self.getTripeExponential(df['close'])
+        
         return df
 
 collection = "niftybankticks"

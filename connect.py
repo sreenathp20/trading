@@ -5,11 +5,12 @@ import pandas as pd
 
 import datetime
 from des import double_exponential_smoothing
+from tes import triple_exponential_smoothing
 
 class Upstox:
     def __init__(self):
         self.BASE_URL = 'https://api-v2.upstox.com'
-        self.CODE = '_6pk2x'
+        self.CODE = '1KoVN-'
         self.API_KEY = 'a33d9f29-4518-4b91-8a0f-2dc149061507'
         self.API_SECRET = '0rftxdw8by'
         self.REDIRECT_URI = 'http://127.0.0.1'
@@ -181,7 +182,7 @@ class Upstox:
             cnt += 1
         return cnt
     
-    def getMovingAverage(self, data):
+    def getMovingAverage(self, data, alpha_final, beta_final, gamma_final):
         df_data = {"date": [], "open": [], "high": [], "low": [], "close": [], "ema_open": [], "ema_close": []}
         for d in data:
             df_data["date"].append(d["date"])
@@ -192,14 +193,20 @@ class Upstox:
             df_data["ema_open"].append(d["ema_open"])
             df_data["ema_close"].append(d["ema_close"])
         df = pd.DataFrame(df_data)
+        rolling = 3
+        t3 = triple_exponential_smoothing(df['close'], alpha_final, beta_final, gamma_final)
+        df['tes_close'] = pd.Series(t3[:len(df['close'])])
         df['des_close_p1'] = double_exponential_smoothing(df['close'], 0.9, 0.1, 1)[:-1]
         df['des_close_p9'] = double_exponential_smoothing(df['close'], 0.9, 0.9, 1)[:-1]
-        rolling = 3
+        df['des_close_p9_ma3'] = df['des_close_p9'].rolling(rolling).mean()
+        
         df['ema_close_ma3'] = df['ema_close'].rolling(rolling).mean()
         res = []
         for i in range(len(df)):
-            result = {"date": df["date"][i], "open": df["open"][i], "high": df["high"][i], "low": df["low"][i], "close": df["close"][i], "ema_open": df["ema_open"][i], "ema_close": df["ema_close"][i], "ema_close_ma3": df["ema_close_ma3"][i] if i >= rolling else df["ema_close"][i],
-            "des_close_p1": df["des_close_p1"][i], "des_close_p9": df["des_close_p9"][i]}
+            result = {"date": df["date"][i], "open": df["open"][i], "high": df["high"][i], "low": df["low"][i], "close": df["close"][i], "ema_open": df["ema_open"][i], "ema_close": df["ema_close"][i],
+            "ema_close_ma3": df["ema_close_ma3"][i] if i >= rolling else df["ema_close"][i],
+            "des_close_p9_ma3": df["des_close_p9_ma3"][i] if i >= rolling else df["des_close_p9"][i],
+            "des_close_p1": df["des_close_p1"][i], "des_close_p9": df["des_close_p9"][i], "tes_close": df["tes_close"][i]}
             res.append(result)
         pass
         return res
@@ -240,13 +247,14 @@ class Upstox:
                 direction = 'UP'
         return direction
     
-    def backTest(self, collection, start, end, limit):
+    def backTest(self, collection, start, end, limit, alpha_final, beta_final, gamma_final):
         #start = datetime.datetime(2023, 1, 2)
-        #end = datetime.datetime(2023, 1, 3)
+        #end = datetime.datetime(2023, 1, 3)        
+        
         data = mongo.readAll(collection, start, end)
         #collection += 'MA10'
         if len(data) > 0:
-            data = self.getMovingAverage(data)
+            data = self.getMovingAverage(data, alpha_final, beta_final, gamma_final)
             prev = data[0]
             prev_direction = ''
             first = True
@@ -256,7 +264,8 @@ class Upstox:
                 # if i < len(data):
                 #     next = data[i]
                 #if prev['ema_close_ma3'] > d['ema_close_ma3']:
-                if prev['des_close_p1'] > d['des_close_p1']:
+                #if prev['des_close_p9'] > d['des_close_p9']:                    
+                if prev['tes_close'] > d['tes_close']:
                 #if prev['close'] > d['close']:
                     direction = 'DOWN'
                 else:
@@ -478,7 +487,7 @@ class Upstox:
             diff.append(min)
 
             points += addition
-            print(addition, " addition", min, buy['date'], sell['date'], direction)
+            #print(addition, " addition", min, buy['date'], sell['date'], direction)
             if addition > 0:
                 p_l["p"] += 1
             elif addition < 0:

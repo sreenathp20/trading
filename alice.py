@@ -201,7 +201,7 @@ def main():
     #                     order_tag='order1')
     pass
 
-# a = AliceBlue()
+a = AliceBlue()
 # a.alice.get_session_id()
 #oh = a.alice.get_order_history(1700000097915771)
 #ot = a.alice.get_trade_book()
@@ -211,6 +211,7 @@ def main():
 #a.atm()
 #a.strike_price()
 #a.web_socket()
-#fo = a.alice.get_instrument_for_fno(exch="NFO",symbol='BANKNIFTY', expiry_date="2023-04-27", is_fut=False,strike=None, is_CE=False)
+fo = a.alice.get_instrument_for_fno(exch="NFO",symbol='BANKNIFTY', expiry_date="2023-05-11", is_fut=False,strike=41100, is_CE=False)
 #main()
 #socket()
+pass

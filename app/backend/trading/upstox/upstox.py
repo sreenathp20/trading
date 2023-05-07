@@ -1,6 +1,8 @@
 from upstox import mongodb
 import pandas as pd
 from datetime import datetime, timedelta
+from upstox.tes1 import triple_exponential_smoothing_minimize, triple_exponential_smoothing
+from upstox.des1 import double_exponential_smoothing
 
 class Upstox():
     def __init__(self):
@@ -34,15 +36,18 @@ class Upstox():
             res_data.append({"ts": df['ts'][i], "open": df['open'][i], "high": df['high'][i], "low": df['low'][i], "close": df['close'][i],"ema_close_p3": df['ema_close_p3'][i]})
         return res_data
     
-    def getHistoryEMAData(self, data, start):
+    def getHistoryEMAData(self, data):
         df_data = []
         for d in data:
             df_data.append([d['date'], d['open'], d['high'], d['low'], d['close']])
         df = pd.DataFrame(df_data, columns=['date', 'open', 'high', 'low', 'close'])
         df['ema_close_p3'] = df['close'].ewm(alpha=0.3).mean()
-        #print(start)
-        rolling = 10
+        rolling = 3
         df['ema_close_p3'] = df['ema_close_p3'].rolling(rolling).mean()
+        alpha_final, beta_final, gamma_final = triple_exponential_smoothing_minimize(df['close'])
+        t3 = triple_exponential_smoothing(df['close'], alpha_final, beta_final, gamma_final)
+        df['ema_close_p3'] = pd.Series(t3[:len(df['close'])])
+        df['ema_close_p3'] = double_exponential_smoothing(df['close'], 0.9, 0.9, 1)[:-1]
         res_data = []
         for i in range(len(df)):
             if i < (rolling-1):

@@ -15,10 +15,12 @@ def nseindexniftybank(request):
     return JsonResponse(data, safe=False)
 
 def nseindexniftybankhistory(request):
-    start = datetime(2023, 1, 6)
+    start = datetime(2023, 5, 5)
     end = start + timedelta(days=1)
     u = Upstox()
-    data = u.getHistoryData('nseindexniftybank2', start, end)
+    #collection = 'nseindexniftybank2'
+    collection = 'nseindexniftybankPoint9'
+    data = u.getHistoryData(collection, start, end)
     data = u.getHistoryEMAData(data)
     return JsonResponse(data, safe=False)
 
