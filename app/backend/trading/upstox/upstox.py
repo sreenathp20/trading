@@ -41,13 +41,13 @@ class Upstox():
         for d in data:
             df_data.append([d['date'], d['open'], d['high'], d['low'], d['close']])
         df = pd.DataFrame(df_data, columns=['date', 'open', 'high', 'low', 'close'])
-        df['ema_close_p3'] = df['close'].ewm(alpha=0.3).mean()
+        df['ema_close_p3'] = df['close'].ewm(alpha=0.9).mean()
         rolling = 3
         df['ema_close_p3'] = df['ema_close_p3'].rolling(rolling).mean()
-        alpha_final, beta_final, gamma_final = triple_exponential_smoothing_minimize(df['close'])
-        t3 = triple_exponential_smoothing(df['close'], alpha_final, beta_final, gamma_final)
-        df['ema_close_p3'] = pd.Series(t3[:len(df['close'])])
-        df['ema_close_p3'] = double_exponential_smoothing(df['close'], 0.9, 0.9, 1)[:-1]
+        # alpha_final, beta_final, gamma_final = triple_exponential_smoothing_minimize(df['close'])
+        # t3 = triple_exponential_smoothing(df['close'], alpha_final, beta_final, gamma_final)
+        # df['ema_close_p3'] = pd.Series(t3[:len(df['close'])])
+        #df['ema_close_p3'] = double_exponential_smoothing(df['close'], 0.9, 0.9, 1)[:-1]
         res_data = []
         for i in range(len(df)):
             if i < (rolling-1):

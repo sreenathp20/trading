@@ -24,6 +24,15 @@ class MongoDb:
             res.append(d)
         return res
     
+    def readAllForTick(self, collection, start, end):
+        #print("hello 123")
+        col = self.db[collection]
+        data = col.find({"date": {"$gte": start, "$lt": end}}).sort("date", -1)
+        res = []
+        for d in data:
+            res.append(d)
+        return res
+    
     def descending(self, collection, start, end, field):
         #print("hello 123")
         col = self.db[collection]

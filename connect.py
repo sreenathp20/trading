@@ -6,11 +6,12 @@ import pandas as pd
 import datetime
 from des import double_exponential_smoothing
 from tes import triple_exponential_smoothing
+from datetime import timedelta
 
 class Upstox:
     def __init__(self):
         self.BASE_URL = 'https://api-v2.upstox.com'
-        self.CODE = '1KoVN-'
+        self.CODE = 'UGuN52'
         self.API_KEY = 'a33d9f29-4518-4b91-8a0f-2dc149061507'
         self.API_SECRET = '0rftxdw8by'
         self.REDIRECT_URI = 'http://127.0.0.1'
@@ -182,6 +183,37 @@ class Upstox:
             cnt += 1
         return cnt
     
+    def getMovingAveragePred(self, data, alpha_final, beta_final, gamma_final):
+        df_data = {"date": [], "open": [], "high": [], "low": [], "close": [], "ema_open": [], "ema_close": []}
+        for d in data:
+            df_data["date"].append(d["date"])
+            df_data["open"].append(d["open"])
+            df_data["high"].append(d["high"])
+            df_data["low"].append(d["low"])
+            df_data["close"].append(d["close"])
+            df_data["ema_open"].append(d["ema_open"])
+            df_data["ema_close"].append(d["ema_close"])
+        df = pd.DataFrame(df_data)
+        rolling = 3
+        t3 = triple_exponential_smoothing(df['close'], alpha_final, beta_final, gamma_final)
+        df['tes_close'] = pd.Series(t3[:len(df['close'])])
+        df['des_close_p1'] = double_exponential_smoothing(df['close'], 0.9, 0.1, 1)[:-1]
+        df['des_close_p9'] = double_exponential_smoothing(df['close'], 0.9, 0.9, 1)[:-1]
+        df['des_close_p9_ma3'] = df['des_close_p9'].rolling(rolling).mean()
+        
+        df['ema_close_ma3'] = df['ema_close'].rolling(rolling).mean()
+        df['tes_close_ma3'] = df['tes_close'].rolling(rolling).mean()
+        res = []
+        for i in range(len(df)):
+            result = {"date": df["date"][i], "open": df["open"][i], "high": df["high"][i], "low": df["low"][i], "close": df["close"][i], "ema_open": df["ema_open"][i], "ema_close": df["ema_close"][i],
+            "ema_close_ma3": df["ema_close_ma3"][i] if i >= rolling else df["ema_close"][i],
+            "des_close_p9_ma3": df["des_close_p9_ma3"][i] if i >= rolling else df["des_close_p9"][i],
+            "des_close_p1": df["des_close_p1"][i], "des_close_p9": df["des_close_p9"][i], "tes_close": df["tes_close"][i],
+            "tes_close_ma3": df["tes_close_ma3"][i] if i >= rolling else df["tes_close"][i]}
+            res.append(result)
+        pass
+        return res
+    
     def getMovingAverage(self, data, alpha_final, beta_final, gamma_final):
         df_data = {"date": [], "open": [], "high": [], "low": [], "close": [], "ema_open": [], "ema_close": []}
         for d in data:
@@ -201,12 +233,14 @@ class Upstox:
         df['des_close_p9_ma3'] = df['des_close_p9'].rolling(rolling).mean()
         
         df['ema_close_ma3'] = df['ema_close'].rolling(rolling).mean()
+        df['tes_close_ma3'] = df['tes_close'].rolling(rolling).mean()
         res = []
         for i in range(len(df)):
             result = {"date": df["date"][i], "open": df["open"][i], "high": df["high"][i], "low": df["low"][i], "close": df["close"][i], "ema_open": df["ema_open"][i], "ema_close": df["ema_close"][i],
             "ema_close_ma3": df["ema_close_ma3"][i] if i >= rolling else df["ema_close"][i],
             "des_close_p9_ma3": df["des_close_p9_ma3"][i] if i >= rolling else df["des_close_p9"][i],
-            "des_close_p1": df["des_close_p1"][i], "des_close_p9": df["des_close_p9"][i], "tes_close": df["tes_close"][i]}
+            "des_close_p1": df["des_close_p1"][i], "des_close_p9": df["des_close_p9"][i], "tes_close": df["tes_close"][i],
+            "tes_close_ma3": df["tes_close_ma3"][i] if i >= rolling else df["tes_close"][i]}
             res.append(result)
         pass
         return res
@@ -247,6 +281,85 @@ class Upstox:
                 direction = 'UP'
         return direction
     
+    def backTestPred(self, collection, start, end, limit, alpha_final, beta_final, gamma_final):
+        #start = datetime.datetime(2023, 1, 2)
+        #end = datetime.datetime(2023, 1, 3)    
+        data2 = []
+        previous_day = start
+        while len(data2) == 0:    
+            previous_day_end = previous_day
+            previous_day = previous_day - timedelta(days=1)            
+            data2 = mongo.readAll(collection, previous_day, previous_day_end)
+
+        data1 = mongo.readAll(collection, start, end)
+        
+        #collection += 'MA10'
+        if len(data1) > 0:
+            prev_direction = ''
+            first = True
+            tot_pl = 0
+            for i in range(len(data1)):                
+                data3 = self.getMovingAveragePred(data2+data1[:i+1], alpha_final, beta_final, gamma_final)
+                prev = data3[len(data2)+i - 1]
+                d = data3[len(data2)+i]
+                # if i < len(data):
+                #     next = data[i]
+                #if prev['ema_close_ma3'] > d['ema_close_ma3']:
+                #if prev['des_close_p9'] > d['des_close_p9']:                    
+                if prev['tes_close'] > d['tes_close']:
+                #if prev['tes_close_ma3'] > d['tes_close_ma3']:                    
+                #if prev['close'] > d['close']:
+                    direction = 'DOWN'
+                else:
+                    direction = 'UP'
+                #next.pop("_id")
+                # d['next_date'] = next['date']
+                # d['next_open'] = next['open']
+                # d['next_high'] = next['high']
+                # d['next_low'] = next['low']
+                # d['next_close'] = next['close']
+                # d['next_ema_close_ma3'] = next['ema_close_ma3']
+                if first:
+                    prev_direction = direction
+                    first = False
+                    self.buyOrSellStock(d, direction, 'BUY', collection)
+                    prev_buy = d
+                if prev_buy['direction'] == 'UP':
+                    future_pl = d['close'] - prev_buy['close']
+                if prev_buy['direction'] == 'DOWN':
+                    future_pl = prev_buy['close'] - d['close']
+                if direction != prev_direction:
+                    dif = d['date'] - prev_buy['date']
+                    min = dif.total_seconds()/60
+                    #last_buy = self.getLastBuy('transactions_'+collection, start, end)
+                    
+                    
+                    
+                    if min > 0 and (future_pl > 0 or future_pl < -99):  
+                    #if min > 0 and (future_pl > 0):  
+                    #if min > 0:  
+                        tot_pl += future_pl                      
+                        self.buyOrSellStock(d, prev_direction, 'SELL', collection)
+                        prev_direction = direction
+                        self.buyOrSellStock(d, direction, 'BUY', collection)
+                        prev_buy = d
+                    if tot_pl < -49:
+                        direction = prev_direction
+                        break
+                else:
+                    if (future_pl > 20 or future_pl < -20):  
+                        tot_pl += future_pl                      
+                        self.buyOrSellStock(d, prev_direction, 'SELL', collection)
+                        prev_direction = direction
+                        self.buyOrSellStock(d, direction, 'BUY', collection)
+                        prev_buy = d
+                #cnt += 1
+                i += 1
+                #prev_direction = direction
+                prev = d
+            self.buyOrSellStock(d, direction, 'SELL', collection)
+        return limit
+    
     def backTest(self, collection, start, end, limit, alpha_final, beta_final, gamma_final):
         #start = datetime.datetime(2023, 1, 2)
         #end = datetime.datetime(2023, 1, 3)        
@@ -266,6 +379,7 @@ class Upstox:
                 #if prev['ema_close_ma3'] > d['ema_close_ma3']:
                 #if prev['des_close_p9'] > d['des_close_p9']:                    
                 if prev['tes_close'] > d['tes_close']:
+                #if prev['tes_close_ma3'] > d['tes_close_ma3']:                    
                 #if prev['close'] > d['close']:
                     direction = 'DOWN'
                 else:
@@ -294,6 +408,7 @@ class Upstox:
                     
                     if min > 0 and (future_pl > 0 or future_pl < -99):  
                     #if min > 0 and (future_pl > 0):  
+                    #if min > 0:  
                         tot_pl += future_pl                      
                         self.buyOrSellStock(d, prev_direction, 'SELL', collection)
                         prev_direction = direction
@@ -473,28 +588,29 @@ class Upstox:
         p_l = {"p": 0, "l": 0}
         diff = []
         for i in range(0, len(data), 2):
-            buy = data[i]
-            sell = data[i+1]
-            direction = buy['direction']
-            addition = 0
-            if direction == 'UP':
-                addition = sell['close'] - buy['close']
-            else:
-                addition = buy['close'] - sell['close']
-            dif = sell['date'] - buy['date']
-            #print(addition, " addition")
-            min = dif.total_seconds()/60
-            diff.append(min)
+            if((i+1) < len(data)):
+                buy = data[i]
+                sell = data[i+1]
+                direction = buy['direction']
+                addition = 0
+                if direction == 'UP':
+                    addition = sell['close'] - buy['close']
+                else:
+                    addition = buy['close'] - sell['close']
+                dif = sell['date'] - buy['date']
+                #print(addition, " addition")
+                min = dif.total_seconds()/60
+                diff.append(min)
 
-            points += addition
-            #print(addition, " addition", min, buy['date'], sell['date'], direction)
-            if addition > 0:
-                p_l["p"] += 1
-            elif addition < 0:
-                p_l["l"] += 1
-            # if points < strip:
-            #     break
-            #print(i)
+                points += addition
+                print(addition, " addition", min, buy['date'], sell['date'], direction)
+                if addition > 0:
+                    p_l["p"] += 1
+                elif addition < 0:
+                    p_l["l"] += 1
+                # if points < strip:
+                #     break
+                #print(i)
         print(points, " points ", no_trx, p_l, start)
         return points
     

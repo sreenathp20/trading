@@ -211,7 +211,7 @@ a = AliceBlue()
 #a.atm()
 #a.strike_price()
 #a.web_socket()
-fo = a.alice.get_instrument_for_fno(exch="NFO",symbol='BANKNIFTY', expiry_date="2023-05-11", is_fut=False,strike=41100, is_CE=False)
+#fo = a.alice.get_instrument_for_fno(exch="NFO",symbol='BANKNIFTY', expiry_date="2023-05-11", is_fut=False,strike=41100, is_CE=False)
 #main()
 #socket()
-pass
+#pass

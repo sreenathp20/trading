@@ -6,19 +6,19 @@ mongo = MongoDb()
 
 u = Upstox()
 
-# start = datetime(2023, 2, 1)
-# limit = 100
-start = datetime(2022, 10, 30)
-limit = 7
+start = datetime(2023, 5, 11)
+limit = 1
+# start = datetime(2022, 10, 26)
+# limit = 220
 from tes import triple_exponential_smoothing_minimize
 
-
+# 6341.549999999901 previous result total
 #u.getAccessToken()
 #u.getUserProfile()
 #u.getUserFundsAndMargin()
 #u.getPositions()
 #u.getHoldings()
-#u.historicalCandleData('nseindexniftybankPoint9', 'NSE_INDEX|Nifty Bank', '1minute', '2023-05-06', '2023-05-05' )
+#u.historicalCandleData('nseindexniftybankPoint9', 'NSE_INDEX|Nifty Bank', '1minute', '2023-05-12', '2023-05-11' )
 #u.getAllCandleData('nifty50')
 #df1 = u.getDfData('nifty50', start, end)
 #u.placeOrder()
@@ -28,9 +28,10 @@ collection = 'nseindexniftybankPoint9'
 df = u.getDf(collection, datetime(2022, 10, 25), datetime(2023, 5, 25))
 alpha_final, beta_final, gamma_final = triple_exponential_smoothing_minimize(df['close'])
 for i in range(limit):
-    end = start + timedelta(days=30)
+    end = start + timedelta(days=1)
     print(start, end)
     #limit = u.backTest(collection, start, end, -49, alpha_final, beta_final, gamma_final)
+    limit = u.backTestPred(collection, start, end, -49, alpha_final, beta_final, gamma_final)
     #limit = u.backTest5min('nseindexniftybankPoint9_5min', start, end, -49)
     #limit = u.backTest2('nseindexniftybankPoint9', start, end, -79)
     points = u.getProfitOrLoss('tnx_'+collection, start, end,-49)

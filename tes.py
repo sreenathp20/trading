@@ -206,8 +206,8 @@ def triple_exponential_smoothing(series, alpha_final, beta_final, gamma_final):
     model.fit(data)
     predictions = model.predict(n_preds=50)
 
-    print('original series length: ', len(series))
-    print('prediction length: ', len(predictions))
+    # print('original series length: ', len(series))
+    # print('prediction length: ', len(predictions))
 
     data = series.values
     error = mean_absolute_percentage_error(data, predictions[:len(series)])

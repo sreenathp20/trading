@@ -11,22 +11,45 @@ from tes import triple_exponential_smoothing_minimize, triple_exponential_smooth
 class Order:
     def __init__(self):
         self.strike = None
-        self.strike_ce = 43800
-        self.strike_pe = 41000
+        self.strike_ce = 44900
+        self.strike_pe = 42000
         self.prev_tnx = ''
-        self.debug = True
+        self.debug = False
         self.QUANTITY = 25
+        expiry_date = '2023-05-18'
+        a = AliceBlue()
+        a.alice.get_session_id()
+        self.fo_pe = a.alice.get_instrument_for_fno(exch="NFO",symbol='BANKNIFTY', expiry_date=expiry_date, is_fut=False,strike=self.strike_pe, is_CE=False)
+        self.fo_ce = a.alice.get_instrument_for_fno(exch="NFO",symbol='BANKNIFTY', expiry_date=expiry_date, is_fut=False,strike=self.strike_ce, is_CE=True)
         pass
 
     def checkLatestTick(self, collection, start, end):
-        
+        data1 = []
+        previous_day_end = start
+        while len(data1) == 0:
+            previous_day = previous_day_end - timedelta(days=1)
+            data1 = mongo.readAllForTick('nseindexniftybankPoint9', previous_day, previous_day_end)
+            previous_day_end = previous_day
         data = mongo.readTickData(collection, start, end)
-        return data
+        all_data = []
+        for d in data:
+            all_data.append(d)
+        for d in data1:
+            d["ts"] = d["date"]
+            d["interval"] = "I1"
+            if "ema_open" in d:
+                del d['ema_open']
+            if "ema_close" in d:
+                del d['ema_close']
+            if "date" in d:
+                del d['date']
+            all_data.append(d)
+        return all_data
 
     def getData(self, collection):
         p_l, ot = self.pAndL()
-        #today = datetime.today()
-        today = datetime(2023,4,27)
+        today = datetime.today()
+        #today = datetime(2023,4,27)
         daystart = datetime(year=today.year, month=today.month, 
                     day=today.day, hour=0, minute=0, second=0) 
 
@@ -41,10 +64,11 @@ class Order:
         while True:
             new_data = self.checkLatestTick(collection, start, end) 
                        
-            print("new check")            
+            #print("new check")            
             if len(new_data) > len(data):
                 processed_data = self.processNewData(processed_data, new_data, alpha, rolling)
-                if len(new_data) > 3:
+                if len(new_data) > 1:
+                    print("========================================================")
                     flag = self.trade(processed_data, collection, start, end, new_data[0], p_l, ot)
                 data = new_data
                 print("new data received")
@@ -80,12 +104,14 @@ class Order:
         if direction == 'DOWN':
             is_ce = False
             strike = self.strike_pe
+            fo = self.fo_pe
         else:
             is_ce = True
             strike = self.strike_ce
+            fo = self.fo_ce
         a = AliceBlue()
         a.alice.get_session_id()
-        fo = a.alice.get_instrument_for_fno(exch="NFO",symbol='BANKNIFTY', expiry_date="2023-05-11", is_fut=False,strike=strike, is_CE=is_ce)
+        # fo = a.alice.get_instrument_for_fno(exch="NFO",symbol='BANKNIFTY', expiry_date="2023-05-11", is_fut=False,strike=strike, is_CE=is_ce)
         if not self.debug:
             o = a.alice.place_order(transaction_type = trans_type, 
                                 instrument = fo,
@@ -130,7 +156,7 @@ class Order:
                     addition = sell['close'] - buy['close']
                 else:
                     addition = buy['close'] - sell['close']
-                dif = sell['date'] - buy['date']
+                dif = sell['ts'] - buy['ts']
                 #print(addition, " addition")
                 min = dif.total_seconds()/60
                 points += addition
@@ -143,11 +169,15 @@ class Order:
             data = mongo.readLatestTnx(collection, start, end)
         else:
             data = ot
-        point_data = data = mongo.readLatestTnx(collection, start, end)
+        point_data = mongo.readLatestTnx(collection, start, end)
         tot_points = self.getTotalPoints(point_data)
         today = datetime.today()
         dayend = datetime(year=today.year, month=today.month, 
                     day=today.day, hour=15, minute=25, second=0)
+        
+        print("Time: ", latest_data['ts'])
+        print("Total points:", tot_points)
+        print("Total p_l:", p_l)
         if len(data) > 0:
             prev_tnx = data[0]
             if self.debug:
@@ -168,22 +198,52 @@ class Order:
                     self.sellStock(latest_data, prev_direction, collection)  
                     self.prev_tnx = 'SELL'
                     direction = prev_direction
-                
+                print("point_data[0]['close']: ", point_data[0]['close'])
+                print("point_data[0]['ts']: ", point_data[0]['ts'])
+                print("point_data[0]['direction']: ", point_data[0]['direction'])
+                print("latest_data['close']: ", latest_data['close'])
                 if point_data[0]['direction'] == 'UP':
                     future_pl = latest_data['close'] - point_data[0]['close']
                 elif point_data[0]['direction'] == 'DOWN':
-                    future_pl = point_data[0]['close'] - latest_data['close'] 
+                    future_pl = point_data[0]['close'] - latest_data['close']
+                print("future_pl:", future_pl)
+                print("direction: ", direction)
+                print("prev_direction: ", prev_direction)
                 if direction != prev_direction:
-                    tot_points += future_pl
+                    print("Direction changed: ", latest_data['ts'])
+                    
                     if future_pl > 0 or future_pl < -99:
+                        tot_points += future_pl
                         self.sellStock(latest_data, prev_direction, collection)
                         self.prev_tnx = 'SELL'   
+                        sleep(1)
+                        ts = latest_data['ts']
+                        latest_data['ts'] = datetime(year=ts.year, month=ts.month, 
+                        day=ts.day, hour=ts.hour, minute=ts.minute, second=1)
                         self.buyStock(latest_data, direction, collection) 
-                        self.prev_tnx = 'BUY'    
+                        self.prev_tnx = 'BUY'
+                        sleep(1)    
+                    prev_direction = direction
                     if tot_points < -49:
                         self.sellStock(latest_data, prev_direction, collection)
                         self.prev_tnx = 'SELL'
-                        return False          
+                        return False 
+                else:
+                    if future_pl > 20 or future_pl < -20:
+                        self.sellStock(latest_data, prev_direction, collection)
+                        self.prev_tnx = 'SELL'   
+                        sleep(1)
+                        if future_pl < -20:
+                            if direction == 'UP':
+                                direction = 'DOWN'
+                            else:
+                                direction = 'UP'
+                        ts = latest_data['ts']
+                        latest_data['ts'] = datetime(year=ts.year, month=ts.month, 
+                        day=ts.day, hour=ts.hour, minute=ts.minute, second=1)
+                        self.buyStock(latest_data, direction, collection) 
+                        self.prev_tnx = 'BUY'
+                    
                                          
         else:
             if latest_data["ts"] < dayend:
@@ -196,8 +256,11 @@ class Order:
     def getDirection(self, processed_data):
         #field = 'ema_close_ma'
         field = 'tes_close'
+        #field = 'close'
         cur = processed_data[field][len(processed_data) - 1]
         prev = processed_data[field][len(processed_data) - 2]
+        print("cur: ", cur)
+        print("prev: ", prev)
         if prev > cur:
             direction = 'DOWN'
         else:
@@ -242,6 +305,4 @@ class Order:
         
         return df
 
-collection = "niftybankticks"
-o = Order()
-o.getData(collection)
+
