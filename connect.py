@@ -11,7 +11,7 @@ from datetime import timedelta
 class Upstox:
     def __init__(self):
         self.BASE_URL = 'https://api-v2.upstox.com'
-        self.CODE = 'UGuN52'
+        self.CODE = '2lxzav'
         self.API_KEY = 'a33d9f29-4518-4b91-8a0f-2dc149061507'
         self.API_SECRET = '0rftxdw8by'
         self.REDIRECT_URI = 'http://127.0.0.1'
@@ -351,6 +351,11 @@ class Upstox:
                         tot_pl += future_pl                      
                         self.buyOrSellStock(d, prev_direction, 'SELL', collection)
                         prev_direction = direction
+                        if future_pl < -20:
+                            if direction == 'UP':
+                                direction = 'DOWN'
+                            else:
+                                direction = 'UP'
                         self.buyOrSellStock(d, direction, 'BUY', collection)
                         prev_buy = d
                 #cnt += 1

@@ -6,7 +6,7 @@ mongo = MongoDb()
 
 u = Upstox()
 
-start = datetime(2023, 5, 11)
+start = datetime(2023, 5, 12)
 limit = 1
 # start = datetime(2022, 10, 26)
 # limit = 220
@@ -18,7 +18,7 @@ from tes import triple_exponential_smoothing_minimize
 #u.getUserFundsAndMargin()
 #u.getPositions()
 #u.getHoldings()
-#u.historicalCandleData('nseindexniftybankPoint9', 'NSE_INDEX|Nifty Bank', '1minute', '2023-05-12', '2023-05-11' )
+#u.historicalCandleData('nseindexniftybankPoint9', 'NSE_INDEX|Nifty Bank', '1minute', '2023-05-13', '2023-05-12' )
 #u.getAllCandleData('nifty50')
 #df1 = u.getDfData('nifty50', start, end)
 #u.placeOrder()

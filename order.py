@@ -7,6 +7,7 @@ from connect import Upstox
 from pya3 import *
 from alice import AliceBlue
 from tes import triple_exponential_smoothing_minimize, triple_exponential_smoothing
+import json
 
 class Order:
     def __init__(self):
@@ -94,9 +95,22 @@ class Order:
             ot = []
         p_l = order['sell'] - order['buy']
         return p_l, ot
+    
+    def loadMetaData(self):
+        f = open('meta_data.json')  
+        # returns JSON object as 
+        # a dictionary
+        data = json.load(f)
+        pass
+        return data
 
 
     def transact(self, type, direction):
+        meta_json = self.loadMetaData()
+        expiry_date = meta_json['expiry_date']
+        self.strike_pe = meta_json['strike_pe']
+        self.strike_ce = meta_json['strike_ce']
+        self.QUANTITY = meta_json['quantity']
         if type == 'BUY':
             trans_type = TransactionType.Buy
         else:
@@ -104,10 +118,12 @@ class Order:
         if direction == 'DOWN':
             is_ce = False
             strike = self.strike_pe
+            self.fo_pe = a.alice.get_instrument_for_fno(exch="NFO",symbol='BANKNIFTY', expiry_date=expiry_date, is_fut=False,strike=self.strike_pe, is_CE=False)        
             fo = self.fo_pe
         else:
             is_ce = True
             strike = self.strike_ce
+            self.fo_ce = a.alice.get_instrument_for_fno(exch="NFO",symbol='BANKNIFTY', expiry_date=expiry_date, is_fut=False,strike=self.strike_ce, is_CE=True)
             fo = self.fo_ce
         a = AliceBlue()
         a.alice.get_session_id()
