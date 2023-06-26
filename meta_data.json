@@ -1,6 +1,6 @@
 {
-    "strike_ce": 44900,
-    "strike_pe": 42000,
+    "strike_ce": 45000,
+    "strike_pe": 42200,
     "expiry_date": "2023-05-18",
-    "quantity": 25
+    "quantity": 900
 }

@@ -1,0 +1,311 @@
+{
+    "instruments": [
+        {
+            "name": "RAMCOCEM", "token": 523009
+        },
+        {
+            "name": "TCS", "token": 2953217
+        },
+        {
+            "name": "ONGC", "token": 633601
+        },
+        {
+            "name": "INFY", "token": 408065
+        },
+        {
+            "name": "HINDUNILVR", "token": 356865
+        },
+        {
+            "name": "HDFCBANK", "token": 341249
+        },
+        {
+            "name": "GOLDBEES", "token": 3693569
+        },
+        {
+            "name": "UPL", "token": 2889473
+        },
+        {
+            "name": "BDL", "token": 548865
+        },
+        {
+            "name": "LODHA", "token": 824321
+        },
+        {
+            "name": "SUNPHARMA", "token": 857857
+        },
+        {
+            "name": "GODREJCP", "token": 2585345
+        },
+        {
+            "name": "AETHER", "token": 2511361
+        },
+        {
+            "name": "ADANIGREEN", "token": 912129
+        },
+        {
+            "name": "ADANITRANS", "token": 2615553
+        },
+        {
+            "name": "KPITTECH", "token": 2478849
+        },
+        {
+            "name": "ATGL", "token": 1552897
+        },
+        {
+            "name": "VOLTAS", "token": 951809
+        },
+        {
+            "name": "BHARTIARTL", "token": 2714625
+        },
+        {
+            "name": "BHARATFORG", "token": 108033
+        },
+        {
+            "name": "GNA", "token": 4754177
+        },
+        {
+            "name": "PSPPROJECT", "token": 5344513
+        },
+        {
+            "name": "XPROINDIA", "token": 2920193
+        },
+        {
+            "name": "JSWSTEEL", "token": 3001089
+        },
+        {
+            "name": "PAYTM", "token": 1716481
+        },
+        {
+            "name": "SYNGENE", "token": 2622209
+        },
+        {
+            "name": "ADANIPORTS", "token": 3861249
+        },
+        {
+            "name": "MFSL", "token": 548353
+        },
+        {
+            "name": "TEGA", "token": 1818881
+        },
+        {
+            "name": "LANDMARK", "token": 3398657
+        },
+        {
+            "name": "SBILIFE", "token": 5582849
+        },
+        {
+            "name": "VIPIND", "token": 947969
+        },
+        {
+            "name": "AUROPHARMA", "token": 70401
+        },
+        {
+            "name": "CONTROLPR", "token": 4474113
+        },
+        {
+            "name": "SBIN", "token": 779521
+        },
+        {
+            "name": "GLENMARK", "token": 1895937
+        },
+        {
+            "name": "HARIOMPIPE", "token": 2295809
+        },
+        {
+            "name": "MARICO", "token": 1041153
+        },
+        {
+            "name": "COCHINSHIP", "token": 5506049
+        },
+        {
+            "name": "KALPATPOWR", "token": 464385
+        },
+        {
+            "name": "KABRAEXTRU", "token": 462081
+        },
+        {
+            "name": "TATAMOTORS", "token": 884737
+        },
+        {
+            "name": "IGL", "token": 2883073
+        },
+        {
+            "name": "SJS", "token": 1700609
+        },
+        {
+            "name": "KRRAIL", "token": 131676164
+        },
+        {
+            "name": "GUJGASLTD", "token": 2713345
+        },
+        {
+            "name": "SHARDACROP", "token": 1277953
+        },
+        {
+            "name": "INTELLECT", "token": 1517057
+        },
+        {
+            "name": "JUBLFOOD", "token": 4632577
+        },
+        {
+            "name": "CHEMPLASTS", "token": 1394945
+        },
+        {
+            "name": "ELGIEQUIP", "token": 239873
+        },
+        {
+            "name": "ICICIPRULI", "token": 4774913
+        },
+        {
+            "name": "HINDALCO", "token": 348929
+        },
+        {
+            "name": "DLF", "token": 3771393
+        },
+        {
+            "name": "APTECHT", "token": 2753281
+        },
+        {
+            "name": "MAHINDCIE", "token": 3823873
+        },
+        {
+            "name": "ITC", "token": 424961
+        },
+        {
+            "name": "SULA", "token": 3383809
+        },
+        {
+            "name": "HARSHA", "token": 2857473
+        },
+        {
+            "name": "BALRAMCHIN", "token": 87297
+        },
+        {
+            "name": "MAHSEAMLES", "token": 534529
+        },
+        {
+            "name": "AMBUJACEM", "token": 325121
+        },
+        {
+            "name": "VSSL", "token": 6929153
+        },
+        {
+            "name": "RATEGAIN", "token": 1837313
+        },
+        {
+            "name": "AEGISCHEM", "token": 10241
+        },
+        {
+            "name": "KIRLOSENG", "token": 5359617
+        },
+        {
+            "name": "TRITURBINE", "token": 6549505
+        },
+        {
+            "name": "KRBL", "token": 2707713
+        },
+        {
+            "name": "WIPRO", "token": 969473
+        },
+        {
+            "name": "JKPAPER", "token": 136233476
+        },
+        {
+            "name": "UNIVCABLES", "token": 923393
+        },
+        {
+            "name": "UNICHEMLAB", "token": 916225
+        },
+        {
+            "name": "DELHIVERY", "token": 2457345
+        },
+        {
+            "name": "SUPRAJIT", "token": 2992385
+        },
+        {
+            "name": "DSSL", "token": 6576641
+        },
+        {
+            "name": "INDHOTEL", "token": 387073
+        },
+        {
+            "name": "STAR", "token": 1887745
+        },
+        {
+            "name": "TWL", "token": 3945985
+        },
+        {
+            "name": "KAMDHENU", "token": 3444993
+        },
+        {
+            "name": "POONAWALLA", "token": 2919169
+        },
+        {
+            "name": "JUBLPHARMA", "token": 931073
+        },
+        {
+            "name": "VTL", "token": 530689
+        },
+        {
+            "name": "FACT", "token": 258049
+        },
+        {
+            "name": "ZENSARTECH", "token": 275457
+        },
+        {
+            "name": "CANBK", "token": 2763265
+        },
+        {
+            "name": "SALZERELEC", "token": 2918145
+        },
+        {
+            "name": "AJMERA", "token": 4430593
+        },
+        {
+            "name": "CHAMBLFERT", "token": 163073
+        },
+        {
+            "name": "MOLDTEK", "token": 134723332
+        },
+        {
+            "name": "MOLDTECH", "token": 4512001
+        },
+        {
+            "name": "EVEREADY", "token": 3016193
+        },
+        {
+            "name": "CHEMBOND", "token": 3742209
+        },
+        {
+            "name": "M&MFIN", "token": 3400961
+        },
+        {
+            "name": "VEDL", "token": 784129
+        },
+        {
+            "name": "TRIVENI", "token": 3348737
+        },
+        {
+            "name": "ARROWGREEN", "token": 2370561
+        },
+        {
+            "name": "GSPL", "token": 3378433
+        },
+        {
+            "name": "HCG", "token": 3982081
+        },
+        {
+            "name": "MINDACORP", "token": 6629633
+        },
+        {
+            "name": "JKIL", "token": 3908097
+        },
+        {
+            "name": "KOLTEPATIL", "token": 3871745
+        },
+        {
+            "name": "CROMPTON", "token": 4376065
+        }
+    ]
+    
+}

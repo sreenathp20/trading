@@ -24,6 +24,17 @@ class Order:
         self.fo_ce = a.alice.get_instrument_for_fno(exch="NFO",symbol='BANKNIFTY', expiry_date=expiry_date, is_fut=False,strike=self.strike_ce, is_CE=True)
         pass
 
+    def history(self):
+        a = AliceBlue()
+        a.alice.get_session_id()
+        instrument = a.alice.get_instrument_by_symbol("NFO", "RELIANCE")
+        from_date = datetime.now() - timedelta(days=7)
+        to_date = datetime.now()
+        interval = "1"
+        indices = False
+        data = a.alice.get_historical(instrument,from_date,to_date,interval,indices)
+        pass
+
     def checkLatestTick(self, collection, start, end):
         data1 = []
         previous_day_end = start
@@ -84,13 +95,17 @@ class Order:
         a = AliceBlue()
         a.alice.get_session_id()
         ot = a.alice.get_trade_book()
+        hp = a.alice.order_data()
+        ot = list(filter(lambda x: x['Status'] != 'rejected', hp))
+
+        pass
         order = {'buy': 0, 'sell': 0}
         if type(ot) == list:
             for o in ot:
                 if o['Trantype'] == 'S':
-                    order['sell'] += (float(o['Price']) * o['Qty'])
+                    order['sell'] += (float(o['Avgprc']) * o['Qty'])
                 elif o['Trantype'] == 'B':
-                    order['buy'] += (float(o['Price']) * o['Qty'])
+                    order['buy'] += (float(o['Avgprc']) * o['Qty'])
         else:
             ot = []
         p_l = order['sell'] - order['buy']
@@ -111,6 +126,8 @@ class Order:
         self.strike_pe = meta_json['strike_pe']
         self.strike_ce = meta_json['strike_ce']
         self.QUANTITY = meta_json['quantity']
+        a = AliceBlue()
+        a.alice.get_session_id()
         if type == 'BUY':
             trans_type = TransactionType.Buy
         else:
@@ -125,8 +142,7 @@ class Order:
             strike = self.strike_ce
             self.fo_ce = a.alice.get_instrument_for_fno(exch="NFO",symbol='BANKNIFTY', expiry_date=expiry_date, is_fut=False,strike=self.strike_ce, is_CE=True)
             fo = self.fo_ce
-        a = AliceBlue()
-        a.alice.get_session_id()
+        
         # fo = a.alice.get_instrument_for_fno(exch="NFO",symbol='BANKNIFTY', expiry_date="2023-05-11", is_fut=False,strike=strike, is_CE=is_ce)
         if not self.debug:
             o = a.alice.place_order(transaction_type = trans_type, 
@@ -245,11 +261,11 @@ class Order:
                         self.prev_tnx = 'SELL'
                         return False 
                 else:
-                    if future_pl > 20 or future_pl < -20:
+                    if future_pl > 10 or future_pl < -10:
                         self.sellStock(latest_data, prev_direction, collection)
                         self.prev_tnx = 'SELL'   
                         sleep(1)
-                        if future_pl < -20:
+                        if future_pl < -10:
                             if direction == 'UP':
                                 direction = 'DOWN'
                             else:

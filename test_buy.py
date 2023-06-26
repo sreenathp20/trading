@@ -20,4 +20,4 @@ start = daystart
 end = start + timedelta(days=1)
 new_data = o.checkLatestTick(collection, start, end)
 latest_data = new_data[0]
-o.buyStock(latest_data, 'DOWN', collection)
+o.buyStock(latest_data, 'UP', collection)

@@ -6,7 +6,7 @@ from datetime import datetime
 class MongoDb:
     def __init__(self):
         self.HOST = 'localhost:27017'
-        self.DATABASE = 'upstox'
+        self.DATABASE = 'kite'
         self.db_client = MongoClient(self.HOST)
         self.db = self.db_client[self.DATABASE]
         pass
@@ -28,6 +28,14 @@ class MongoDb:
         #print("hello 123")
         col = self.db[collection]
         data = col.find({"date": {"$gte": start, "$lt": end}}).sort("date", -1)
+        res = []
+        for d in data:
+            res.append(d)
+        return res
+    
+    def readLatestTick(self, collection):
+        col = self.db[collection]
+        data = col.find({}).sort("date", -1).limit(1)
         res = []
         for d in data:
             res.append(d)

@@ -11,7 +11,7 @@ from datetime import timedelta
 class Upstox:
     def __init__(self):
         self.BASE_URL = 'https://api-v2.upstox.com'
-        self.CODE = '2lxzav'
+        self.CODE = 'pCRoSV'
         self.API_KEY = 'a33d9f29-4518-4b91-8a0f-2dc149061507'
         self.API_SECRET = '0rftxdw8by'
         self.REDIRECT_URI = 'http://127.0.0.1'
@@ -107,6 +107,9 @@ class Upstox:
             d.append(val)
             i += 1
         mongo.insertMany(collection, d)
+        pass
+
+    def history(self):
         pass
 
     def historicalCandleData(self, collection, instrument_key, interval, to_date, from_date):
@@ -280,6 +283,145 @@ class Upstox:
             else:
                 direction = 'UP'
         return direction
+    
+    def loadJsonData(self, collection):
+        f = open('data/'+collection+'.json')  
+        # returns JSON object as 
+        # a dictionary
+        data = json.load(f)
+        d1 = []
+        for d in data['data']['candles']:
+            year = int(d[0].split('T')[0].split('-')[0])
+            month = int(d[0].split('T')[0].split('-')[1])
+            day = int(d[0].split('T')[0].split('-')[2])
+            hour = int(d[0].split('T')[1].split(':')[0])
+            minute = int(d[0].split('T')[1].split(':')[1])
+            b = datetime.datetime(year, month, day, hour, minute)
+            #dt = datetime.datetime.strptime(d[0], "%Y-%M-%DT%H:%M:%S+05:30")
+            d2 = {"date": b, "open": d[1], "high": d[2], "low": d[3], "close": d[4]}
+            d1.append(d2)
+        mongo.insertMany(collection, d1)
+        return data
+    
+    def backTestLowHighCandleTest(self, collection, start, end, total_pl):
+        data2 = []
+        previous_day = start
+        while len(data2) == 0:    
+            previous_day_end = previous_day
+            previous_day = previous_day - timedelta(days=1)            
+            data2 = mongo.readAll(collection, previous_day, previous_day_end)
+        percentage = 0.005
+        low = float('inf')
+        high = float('-inf')
+        for i in data2:
+            if i['low'] < low:
+                low = i['low']
+            if i['high'] > high:
+                high = i['high']
+        data1 = mongo.readAll(collection, start, end)
+        bought_ce = False
+        bought_pe = False
+        sold = False
+        buy_direction = ''
+        for i in data1:
+            if i['high'] > high and not bought_pe and not bought_ce:
+                #self.buyOrSellStock(d, 'UP', 'BUY', collection)
+                buy_direction = 'UP'
+                buy_candle = i
+                bought_ce = True
+            else:
+                if i['low'] < low and not bought_pe  and not bought_ce:
+                    buy_direction = 'DOWN'
+                    buy_candle = i
+                    bought_pe = True
+            if bought_ce:                
+                if i['low'] < (high - 50):
+                    sell_candle = i
+                    sold = True
+                if i['high'] > (high + (high * percentage)):
+                    sell_candle = i
+                    sold = True
+            if bought_pe:   
+                #print(i['high'], " i['high']")             
+                if i['high'] > (low + 50):
+                    sell_candle = i
+                    sold = True
+                if i['low'] < (low - (low * percentage)):
+                    sell_candle = i
+                    sold = True
+            if sold:
+                break
+        if sold:
+            if buy_direction == 'DOWN':
+                pl = buy_candle['low'] - sell_candle['low']
+            if buy_direction == 'UP':
+                pl = sell_candle['high'] - buy_candle['high']
+            print("Profit for the day: ", pl)
+            total_pl["total"] += pl
+            if pl > 0:
+                total_pl["profit"] += 1
+            if pl < 0:
+                total_pl["loss"] += 1
+        print(total_pl, buy_direction, sold)
+        pass
+    
+    def backTest15MinCandleTest(self, collection, start, end, total_pl):
+        percentage = 0.005
+        data1 = mongo.readAll(collection, start, end)
+        #data1 = self.loadJsonData()
+        min15_candle = data1[:15]
+        low = float('inf')
+        high = float('-inf')
+        for i in min15_candle:
+            if i['low'] < low:
+                low = i['low']
+            if i['high'] > high:
+                high = i['high']
+        bought_ce = False
+        bought_pe = False
+        sold = False
+        
+        for i in data1[15:]:
+            if i['high'] > high and not bought_pe and not bought_ce:
+                #self.buyOrSellStock(d, 'UP', 'BUY', collection)
+                buy_direction = 'UP'
+                buy_candle = i
+                bought_ce = True
+            else:
+                if i['low'] < low and not bought_pe  and not bought_ce:
+                    buy_direction = 'DOWN'
+                    buy_candle = i
+                    bought_pe = True
+            if bought_ce:                
+                if i['low'] < low:
+                    sell_candle = i
+                    sold = True
+                if i['high'] > (high + (high * percentage)):
+                    sell_candle = i
+                    sold = True
+            if bought_pe:                
+                if i['high'] > high:
+                    sell_candle = i
+                    sold = True
+                if i['low'] < (low - (low * percentage)):
+                    sell_candle = i
+                    sold = True
+            if sold:
+                break
+        if sold:
+            if buy_direction == 'DOWN':
+                pl = buy_candle['low'] - sell_candle['low']
+            if buy_direction == 'UP':
+                pl = sell_candle['high'] - buy_candle['high']
+            print("Profit for the day: ", pl)
+            total_pl["total"] += pl
+            if pl > 0:
+                total_pl["profit"] += 1
+            if pl < 0:
+                total_pl["loss"] += 1
+        print(total_pl)
+
+        pass
     
     def backTestPred(self, collection, start, end, limit, alpha_final, beta_final, gamma_final):
         #start = datetime.datetime(2023, 1, 2)

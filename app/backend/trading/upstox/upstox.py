@@ -25,6 +25,17 @@ class Upstox():
             data.append(document)
         return data
     
+    def getLtpData(self, collection, start, end):
+        collection=mongodb.kite[collection]
+        myquery = { "date": { "$gte": start, "$lt": end } }
+        cursor = collection.find(myquery, {"tick": 1, "date": 1, "_id": False}).sort("date")
+        data = []
+        for document in cursor:
+            document['close'] = document['tick']
+            document['ema_close_p3'] = document['tick']
+            data.append(document)
+        return data
+    
     def getEMAData(self, data):
         df_data = []
         for d in data:

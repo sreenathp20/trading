@@ -19,9 +19,12 @@ def nseindexniftybankhistory(request):
     end = start + timedelta(days=1)
     u = Upstox()
     #collection = 'nseindexniftybank2'
-    collection = 'nseindexniftybankPoint9'
-    data = u.getHistoryData(collection, start, end)
-    data = u.getHistoryEMAData(data)
+    # collection = 'nseindexniftybankPoint9'
+    # data = u.getHistoryData(collection, start, end)
+    # data = u.getHistoryEMAData(data)
+    start = datetime(2023, 6, 1,9,28,54)
+    end = datetime(2023, 6, 1, 9,35,42)
+    data = u.getLtpData('banknifty_tick_pe', start, end)
     return JsonResponse(data, safe=False)
 
 def nseindexniftybankprofit(request):
