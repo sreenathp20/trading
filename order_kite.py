@@ -35,11 +35,11 @@ class Order:
             #time.sleep(1)
         pass
 
-    def buyOption(self, tick, type, collection):
+    def buyOption(self, tick, type, collection, option):
         data = {
                 "date": tick['date'],
                 "tick": tick['tick'],
-                "option": self.option,
+                "option": option,
                 "type": type
         }
         datas = [data]
@@ -73,23 +73,25 @@ class Order:
                 self.bank_option = 'pe'
             if collection == 'finnifty':
                 self.fin_option = 'pe'
-            self.buyOption(pe, 'buy', collection) 
+            self.buyOption(pe, 'buy', collection, SYMBOL_PE) 
             if order:
                 helper.place_order(SYMBOL_PE, 'BUY', conf['QUANTITY'])  
         if option == 'pe' and (pe['tick'] > ub or pe['tick'] < lb):
-            self.buyOption(pe, 'sell', collection) 
+            self.buyOption(pe, 'sell', collection, SYMBOL_PE) 
             if order:
                 helper.place_order(SYMBOL_PE, 'SELL', conf['QUANTITY'])            
             if pe['tick'] > ub:
                 self.setTrigger(collection, ub)
-                self.buyOption(pe, 'sell', collection)
+                self.buyOption(pe, 'buy', collection, SYMBOL_PE)
+                if order:
+                    helper.place_order(SYMBOL_PE, 'BUY', conf['QUANTITY'])  
             if pe['tick'] < lb:
                 if collection == 'banknifty':
                     self.bank_option = 'ce'                    
                 if collection == 'finnifty':
                     self.fin_option = 'ce'
                 self.setTrigger(collection, ce['tick'])
-                self.buyOption(ce, 'buy', collection)
+                self.buyOption(ce, 'buy', collection, SYMBOL_CE)
                 if order:
                     helper.place_order(SYMBOL_CE, 'BUY', conf['QUANTITY'])  
 
@@ -98,23 +100,25 @@ class Order:
                 self.bank_option = 'ce'
             if collection == 'finnifty':
                 self.fin_option = 'ce'
-            self.buyOption(ce, 'buy', collection) 
+            self.buyOption(ce, 'buy', collection, SYMBOL_CE) 
             if order:
                 helper.place_order(SYMBOL_CE, 'BUY', conf['QUANTITY'])  
         if option == 'ce' and (ce['tick'] > ub or ce['tick'] < lb):
-            self.buyOption(ce, 'sell', collection) 
+            self.buyOption(ce, 'sell', collection, SYMBOL_CE) 
             if order:
                 helper.place_order(SYMBOL_CE, 'SELL', conf['QUANTITY']) 
             if ce['tick'] > ub:
                 self.setTrigger(collection, ub)
-                self.buyOption(ce, 'sell', collection)
+                self.buyOption(ce, 'buy', collection, SYMBOL_CE)
+                if order:
+                    helper.place_order(SYMBOL_CE, 'BUY', conf['QUANTITY'])  
             if ce['tick'] < lb:
                 if collection == 'banknifty':
                     self.bank_option = 'pe'
                 if collection == 'finnifty':
                     self.fin_option = 'pe'
                 self.setTrigger(collection, pe['tick'])
-                self.buyOption(pe, 'buy', collection)
+                self.buyOption(pe, 'buy', collection, SYMBOL_PE)
                 if order:
                     helper.place_order(SYMBOL_PE, 'BUY', conf['QUANTITY']) 
         pass
