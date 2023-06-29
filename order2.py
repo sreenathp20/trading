@@ -1,66 +1,35 @@
 import time
 from db import MongoDb
 from kite_helper import Helper
+from order_kite import Order
 mongo = MongoDb()
+orderObject = Order(fin_option = None, bank_option = None)
 
 helper = Helper(None, None, False, False)
 
-class Order:
-    def __init__(self, fin_option, bank_option):
-        self.fin_option = fin_option
+class Order2:
+    def __init__(self, bank_option, counter):
         self.bank_option = bank_option
-        self.fin_trigger = 180
-        self.bank_trigger = 400
+        self.bank_trigger = 420
         self.print_once = False
+        self.counter = counter
         pass
 
     def main(self):
+        flag = False
         while True:
             pe = mongo.readLatestTick('banknifty_tick_pe')
             ce = mongo.readLatestTick('banknifty_tick_ce')
-            # pe = mongo.readLatestTick('nifty_tick_pe')
-            # ce = mongo.readLatestTick('nifty_tick_ce')
-            fin_pe = mongo.readLatestTick('finnifty_tick_pe')
-            fin_ce = mongo.readLatestTick('finnifty_tick_ce')
-            fin_tick_pe = fin_pe[0]
-            fin_tick_ce = fin_ce[0]
             tick_pe = pe[0]
             tick_ce = ce[0]
-            # print(tick_pe)
-            # print(tick_ce)
-            # print(fin_tick_pe)
-            # print(fin_tick_ce)
-            self.fullStrategy(tick_pe,tick_ce, collection='banknifty', order=False, tl=40)
-            self.fullStrategy(fin_tick_pe,fin_tick_ce, collection='finnifty', order=False, tl=18)
-            #print("============")
-            #time.sleep(1)
+            #print(flag)
+            if not flag:
+                flag = self.counterStrategy(tick_pe,tick_ce, collection='banknifty', order=False, tl=70)
+            else:
+                print("counterStrategy completed")
         pass
 
-    def buyOption(self, tick, type, collection, option):
-        data = {
-                "date": tick['date'],
-                "tick": tick['tick'],
-                "option": option,
-                "type": type
-        }
-        datas = [data]
-        print(type, " :", datas)
-        mongo.insertMany(collection+"_fs_option", datas)
-
-    def setTrigger(self, collection, trigger):
-        if collection == 'banknifty':
-            self.bank_trigger = trigger
-        if collection == 'finnifty':
-            self.fin_trigger = trigger
-
-    def printBounds(self, t, tl):
-        print("Trigger: ", t)
-        print("UB: ", t + tl)
-        print("LB: ", t - tl)
-
-
-
-    def fullStrategy(self, pe, ce, collection, order=False, tl=40):
+    def counterStrategy(self, pe, ce, collection, order=False, tl=70):
         conf = helper.readOrder('order.json')
         #stoploss = helper.readOrder('stoploss.json')
         if collection == 'banknifty':
@@ -76,50 +45,57 @@ class Order:
         ub = trigger + tl
         lb = trigger - tl
         if order and not self.print_once:
-            self.printBounds(trigger, tl)
+            orderObject.printBounds(trigger, tl)
             self.print_once = True
         if pe['tick'] > trigger and not option:
             if collection == 'banknifty':
                 self.bank_option = 'pe'
             if collection == 'finnifty':
                 self.fin_option = 'pe'
-            self.buyOption(pe, 'buy', collection, SYMBOL_PE) 
+            orderObject.buyOption(pe, 'buy', collection, SYMBOL_PE) 
             if order:
                 helper.place_order(SYMBOL_PE, 'BUY', conf['QUANTITY'])  
         if option == 'pe' and (pe['tick'] > ub or pe['tick'] < lb):
-            self.buyOption(pe, 'sell', collection, SYMBOL_PE) 
+            orderObject.buyOption(pe, 'sell', collection, SYMBOL_PE) 
             if order:
                 helper.place_order(SYMBOL_PE, 'SELL', conf['QUANTITY'])            
             if pe['tick'] > ub:
+                return True
                 self.setTrigger(collection, ub)
                 self.buyOption(pe, 'buy', collection, SYMBOL_PE)
                 self.printBounds(ub, tl)
                 if order:
-                    helper.place_order(SYMBOL_PE, 'BUY', conf['QUANTITY'])  
+                    helper.place_order(SYMBOL_PE, 'BUY', conf['QUANTITY'])                  
             if pe['tick'] < lb:
                 if collection == 'banknifty':
                     self.bank_option = 'ce'                    
                 if collection == 'finnifty':
                     self.fin_option = 'ce'
-                self.setTrigger(collection, ce['tick'])
-                self.buyOption(ce, 'buy', collection, SYMBOL_CE)
-                self.printBounds(ce['tick'], tl)
+                if not self.counter:
+                    self.counter = True
+                else:
+                    return True
+                orderObject.setTrigger(collection, ce['tick'])
+                orderObject.buyOption(ce, 'buy', collection, SYMBOL_CE)
+                orderObject.printBounds(ce['tick'], tl)
                 if order:
                     helper.place_order(SYMBOL_CE, 'BUY', conf['QUANTITY'])  
+                
 
         if ce['tick'] > trigger and not option:
             if collection == 'banknifty':
                 self.bank_option = 'ce'
             if collection == 'finnifty':
                 self.fin_option = 'ce'
-            self.buyOption(ce, 'buy', collection, SYMBOL_CE) 
+            orderObject.buyOption(ce, 'buy', collection, SYMBOL_CE) 
             if order:
                 helper.place_order(SYMBOL_CE, 'BUY', conf['QUANTITY'])  
         if option == 'ce' and (ce['tick'] > ub or ce['tick'] < lb):
-            self.buyOption(ce, 'sell', collection, SYMBOL_CE) 
+            orderObject.buyOption(ce, 'sell', collection, SYMBOL_CE) 
             if order:
                 helper.place_order(SYMBOL_CE, 'SELL', conf['QUANTITY']) 
             if ce['tick'] > ub:
+                return True
                 self.setTrigger(collection, ub)
                 self.buyOption(ce, 'buy', collection, SYMBOL_CE)
                 self.printBounds(ub, tl)
@@ -130,10 +106,17 @@ class Order:
                     self.bank_option = 'pe'
                 if collection == 'finnifty':
                     self.fin_option = 'pe'
-                self.setTrigger(collection, pe['tick'])
-                self.buyOption(pe, 'buy', collection, SYMBOL_PE)
-                self.printBounds(pe['tick'], tl)
+                if not self.counter:
+                    self.counter = True
+                else:
+                    return True
+                orderObject.setTrigger(collection, pe['tick'])
+                orderObject.buyOption(pe, 'buy', collection, SYMBOL_PE)
+                orderObject.printBounds(pe['tick'], tl)
                 if order:
                     helper.place_order(SYMBOL_PE, 'BUY', conf['QUANTITY']) 
-        pass
+        return False
 
+o = Order2(bank_option = None, counter=False)
+
+o.main()

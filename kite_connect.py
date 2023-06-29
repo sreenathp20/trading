@@ -8,7 +8,7 @@ h1 = Helper(None, None, False, False)
 
 #h2 = Helper(None, None, False)
 # Initialise
-kws = KiteTicker("v7yjlv3s5zs83imk", "fpIsxnvohKnElfbBQS8Q3Pz5BmGRkY1N")
+kws = KiteTicker("v7yjlv3s5zs83imk", "4Tn5CdP1X13oKJxHovOH3mt1izIgyEFj")
 conf = h.readOrder('order.json')
 def on_ticks(ws, ticks):
     # Callback to receive ticks.
