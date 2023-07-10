@@ -224,7 +224,8 @@ class Helper():
             transaction_type=self.kite.TRANSACTION_TYPE_BUY
         elif type == 'SELL':
             transaction_type=self.kite.TRANSACTION_TYPE_SELL
-        order_id = self.kite.place_order(tradingsymbol=tradingsymbol,
+        try:
+            order_id = self.kite.place_order(tradingsymbol=tradingsymbol,
                                 exchange=self.kite.EXCHANGE_NFO,
                                 transaction_type=transaction_type,
                                 quantity=quantity,
@@ -232,6 +233,9 @@ class Helper():
                                 order_type=self.kite.ORDER_TYPE_MARKET,
                                 product=self.kite.PRODUCT_MIS,
                                 validity=self.kite.VALIDITY_DAY)
+        except:
+            print('retrying place_order')
+            self.place_order(tradingsymbol, type, quantity)
         pass
 
     def readOrder(self, json_file):

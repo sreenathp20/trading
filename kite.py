@@ -10,9 +10,9 @@ import json
 class Kite():
     def __init__(self):
         self.kite = KiteConnect(api_key="v7yjlv3s5zs83imk")
-        self.request_token = 'FeYIfVC4aJgsIej893NOJn2VZ032T7xM'
+        self.request_token = '5ln7mtuoOGM1K9EgWJ6F7VajTv5XpNaq'
         self.api_secret = "yuaogy62eruazre7s3ts8pbr0751tzp7"
-        
+        #https://kite.zerodha.com/connect/login?api_key=v7yjlv3s5zs83imk&v=3
 
     def printLoginUrl(self):
         print(self.kite.login_url())
@@ -405,7 +405,7 @@ class Kite():
                                 validity=self.kite.VALIDITY_DAY)
 
 
-#https://kite.zerodha.com/connect/login?api_key=v7yjlv3s5zs83imk&v=3
+
 k = Kite()
 #k.printLoginUrl()
 k.getAccessToken()

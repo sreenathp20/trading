@@ -8,7 +8,15 @@ h1 = Helper(None, None, False, False)
 
 #h2 = Helper(None, None, False)
 # Initialise
-kws = KiteTicker("v7yjlv3s5zs83imk", "4Tn5CdP1X13oKJxHovOH3mt1izIgyEFj")
+
+def getAccessToken():
+    f = open("kite_access_token.txt", "r")
+    access_token = f.read().strip()
+    return access_token
+
+acc = getAccessToken()
+
+kws = KiteTicker("v7yjlv3s5zs83imk", acc)
 conf = h.readOrder('order.json')
 def on_ticks(ws, ticks):
     # Callback to receive ticks.
@@ -16,17 +24,17 @@ def on_ticks(ws, ticks):
     h.insertTicks(ticks, 400, conf['OPTION_PE'], conf['OPTION_CE'], 'banknifty', 0.2, False)
     #h.fullStrategy(ticks, 400, False)
     #h2.insertTicks(ticks, 400, 11448322, 11436034, 'banknifty23806', 0.2)
-    #h1.insertTicks(ticks, 180, conf['NIFTY_OPTION_PE'], conf['NIFTY_OPTION_CE'], 'nifty', 0.1)
+    h1.insertTicks(ticks, 180, conf['HAS_OPTION_PE'], conf['HAS_OPTION_CE'], 'has', 0.1)
     h1.insertTicks(ticks, 180, conf['FIN_OPTION_PE'], conf['FIN_OPTION_CE'], 'finnifty', 0.1)
     
 
 def on_connect(ws, response):
     # Callback on successful connect.
     # Subscribe to a list of instrument_tokens (RELIANCE and ACC here).
-    ws.subscribe([conf['OPTION_PE'], conf['OPTION_CE'], conf['NIFTY_OPTION_PE'], conf['NIFTY_OPTION_CE'], conf['FIN_OPTION_PE'], conf['FIN_OPTION_CE']])
+    ws.subscribe([conf['OPTION_PE'], conf['OPTION_CE'], conf['HAS_OPTION_PE'], conf['HAS_OPTION_CE'], conf['FIN_OPTION_PE'], conf['FIN_OPTION_CE']])
 
     # Set RELIANCE to tick in `full` mode.
-    ws.set_mode(ws.MODE_FULL, [conf['OPTION_PE'], conf['OPTION_CE'], conf['NIFTY_OPTION_PE'], conf['NIFTY_OPTION_CE'], conf['FIN_OPTION_PE'], conf['FIN_OPTION_CE']])
+    ws.set_mode(ws.MODE_FULL, [conf['OPTION_PE'], conf['OPTION_CE'], conf['HAS_OPTION_PE'], conf['HAS_OPTION_CE'], conf['FIN_OPTION_PE'], conf['FIN_OPTION_CE']])
 
 def on_close(ws, code, reason):
     # On connection close stop the main loop
