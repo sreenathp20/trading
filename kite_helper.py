@@ -7,12 +7,6 @@ import datetime
 from datetime import timedelta
 import json  
 
-BANKNIFTY = 260105
-OPTION_PE = 9591810
-OPTION_CE = 9586690
-NIFTY_OPTION_PE = 14179330
-NIFTY_OPTION_CE = 14164738
-
 
 
 
