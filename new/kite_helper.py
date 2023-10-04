@@ -40,8 +40,14 @@ class Helper():
                 self.price_ce = tick_ce['last_price']
         # first time coming with no direction
         if not direction:
+            print("self.price_pe: ", self.price_pe)
+            print("self.price_ce: ", self.price_ce)
             diff_pe = tick_pe['last_price'] - self.price_pe
             diff_ce = tick_ce['last_price'] - self.price_ce
+            print("last_price PE: ", tick_pe['last_price'])
+            print("last_price CE: ", tick_ce['last_price'])
+            print("diff_pe PE: ", diff_pe)
+            print("diff_ce CE: ", diff_ce)
             if diff_pe >= buffer:
                 last_price = tick_pe['last_price']
                 direction = 'PE'
