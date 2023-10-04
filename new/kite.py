@@ -17,10 +17,10 @@ acc = getAccessToken()
 kws = KiteTicker(API_KEY, acc)
 conf = h.readOrder('order.json')
 def on_ticks(ws, ticks):
-    print(ticks[0]['last_price'])
-    print(ticks[0]['instrument_token'])
-    print(ticks[1]['last_price'])
-    print(ticks[1]['instrument_token'])
+    # print(ticks[0]['last_price'])
+    # print(ticks[0]['instrument_token'])
+    # print(ticks[1]['last_price'])
+    # print(ticks[1]['instrument_token'])
     h.processTicks(ticks, conf)
     
     

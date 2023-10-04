@@ -46,6 +46,7 @@ class Helper():
                 last_price = tick_pe['last_price']
                 direction = 'PE'
                 self.order = last_price // 10 * 11
+                print("PLACE ORDER: SYMBOL: ", symbol_pe, ", BUY, QUANTITY: ", quantity, ", PRICE: ",self.order)
                 self.order_id = self.place_order(symbol_pe, 'BUY', quantity, self.order)
                 conf['DIRECTION'] = direction
                 self.saveToJson(conf, KITE_ACCESS_TOKEN)
@@ -53,6 +54,7 @@ class Helper():
                 last_price = tick_ce['last_price']
                 direction = 'CE'
                 self.order = last_price // 10 * 11
+                print("PLACE ORDER: SYMBOL: ", symbol_ce, ", BUY, QUANTITY: ", quantity, ", PRICE: ",self.order)
                 self.order_id = self.place_order(symbol_ce, 'BUY', quantity, self.order)
                 conf['DIRECTION'] = direction
                 self.saveToJson(conf, KITE_ACCESS_TOKEN)
@@ -65,20 +67,27 @@ class Helper():
             symbol = symbol_ce if direction == 'CE' else symbol_pe
             if status == 'COMPLETE' and order['transaction_type'] == 'BUY':                
                 price = self.order-buffer                
+                print("PLACE ORDER: SYMBOL: ", symbol, ", SELL, QUANTITY: ", quantity, ", PRICE: ",price)
                 self.order_id = self.place_order(symbol, 'SELL', quantity, price)
             
             # if sell is complete resetting to initial state
             if status == 'COMPLETE' and order['transaction_type'] == 'SELL':
-                conf['DIRECTION'] = None
-                self.price_pe = None
-                self.price_ce = None
-                self.order_id = None
+                direction = 'CE' if direction == 'PE' else 'PE'
+                conf['DIRECTION'] = direction
+                self.price_pe = tick_pe['last_price']
+                self.price_ce = tick_ce['last_price']
+                symbol = symbol_ce if direction == 'CE' else symbol_pe
+                last_price = tick_ce['last_price'] if direction == 'CE' else tick_pe['last_price']
+                self.order = last_price // 10 * 11
+                print("PLACE ORDER: SYMBOL: ", symbol, ", BUY, QUANTITY: ", quantity, ", PRICE: ",self.order)
+                self.order_id = self.place_order(symbol, 'BUY', quantity, self.order)
                 self.saveToJson(conf, KITE_ACCESS_TOKEN)
                 pass
             diff = last_price - self.order
             if diff >= buffer:
                 inc = ((diff//buffer) - 1 ) * 20
                 price = self.order + inc
+                print("MODIFY ORDER: ORDER ID: ", self.order_id, ", QUANTITY: ", quantity, ", PRICE: ",price)
                 self.order_id = self.modify_order(self.order_id, quantity, price)
 
 
@@ -108,12 +117,16 @@ class Helper():
         pass
 
     def modify_order(self, order_id,quantity,price):
-        self.kite.modify_order(variety=self.kite.VARIETY_REGULAR,
+        try:
+            self.kite.modify_order(variety=self.kite.VARIETY_REGULAR,
                                           order_id=order_id,
                                           quantity=quantity,
                                           price=price,
                                           order_type=self.kite.ORDER_TYPE_SL,
                                           trigger_price=price)
+        except:
+            print('retrying modify_order')
+            self.modify_order(order_id,quantity,price)
         
         return order_id
 
