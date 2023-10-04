@@ -5,7 +5,7 @@ from kite_helper import Helper
 API_KEY = "v7yjlv3s5zs83imk"
 
 
-h = Helper(API_KEY)
+h = Helper(API_KEY=API_KEY, order_id=None)
 
 def getAccessToken():
     f = open("kite_access_token.txt", "r")
@@ -19,6 +19,8 @@ conf = h.readOrder('order.json')
 def on_ticks(ws, ticks):
     print(ticks[0]['last_price'])
     print(ticks[0]['instrument_token'])
+    print(ticks[1]['last_price'])
+    print(ticks[1]['instrument_token'])
     h.processTicks(ticks, conf)
     
     
