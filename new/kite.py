@@ -1,6 +1,7 @@
 import logging
 from kiteconnect import KiteTicker
 from kite_helper import Helper
+import time
 
 API_KEY = "v7yjlv3s5zs83imk"
 
@@ -17,6 +18,7 @@ acc = getAccessToken()
 kws = KiteTicker(API_KEY, acc)
 conf = h.readOrder('order.json')
 def on_ticks(ws, ticks):
+    #time.sleep(3)
     conf = h.readOrder('order.json')
     # print(ticks[0]['last_price'])
     # print(ticks[0]['instrument_token'])

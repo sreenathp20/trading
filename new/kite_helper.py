@@ -4,6 +4,7 @@ logging.basicConfig(level=logging.DEBUG)
 import datetime
 from datetime import timedelta
 import json  
+import time
 
 
 KITE_ACCESS_TOKEN = "kite_access_token.txt"
@@ -112,22 +113,23 @@ class Helper():
             transaction_type=self.kite.TRANSACTION_TYPE_BUY
         elif type == 'SELL':
             transaction_type=self.kite.TRANSACTION_TYPE_SELL
-        #try:
-        print("price: ", price)
-        order_id = self.kite.place_order(tradingsymbol=tradingsymbol,
-                                exchange=self.kite.EXCHANGE_NFO,
-                                transaction_type=transaction_type,
-                                quantity=quantity,
-                                variety=self.kite.VARIETY_REGULAR,
-                                order_type=self.kite.ORDER_TYPE_SL,
-                                product=self.kite.PRODUCT_MIS,
-                                validity=self.kite.VALIDITY_DAY,
-                                price=price,
-                                trigger_price=price)
-        return order_id
-        # except:
-        #     print('retrying place_order')
-        #     self.place_order(tradingsymbol, type, quantity, price)
+        try:
+            print("price: ", price)
+            order_id = self.kite.place_order(tradingsymbol=tradingsymbol,
+                                    exchange=self.kite.EXCHANGE_NFO,
+                                    transaction_type=transaction_type,
+                                    quantity=quantity,
+                                    variety=self.kite.VARIETY_REGULAR,
+                                    order_type=self.kite.ORDER_TYPE_SL,
+                                    product=self.kite.PRODUCT_MIS,
+                                    validity=self.kite.VALIDITY_DAY,
+                                    price=price,
+                                    trigger_price=price)
+            time.sleep(3)
+            return order_id
+        except:
+            print('retrying place_order')
+            self.place_order(tradingsymbol, type, quantity, price)
         pass
 
     def modify_order(self, order_id,quantity,price):
@@ -138,6 +140,7 @@ class Helper():
                                           price=price,
                                           order_type=self.kite.ORDER_TYPE_SL,
                                           trigger_price=price)
+            time.sleep(3)
         except:
             print('retrying modify_order')
             self.modify_order(order_id,quantity,price)
