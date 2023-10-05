@@ -10,7 +10,7 @@ import json
 class Kite():
     def __init__(self):
         self.kite = KiteConnect(api_key="v7yjlv3s5zs83imk")
-        self.request_token = 'TkR3Io1Uqn2Vq5bn0oLzpQ2mzidkbaN2'
+        self.request_token = 'uRh38MaK9P4vPxbK2heHLZTwjmKg07fr'
         self.api_secret = "yuaogy62eruazre7s3ts8pbr0751tzp7"
         #https://kite.zerodha.com/connect/login?api_key=v7yjlv3s5zs83imk&v=3
 

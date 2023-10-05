@@ -7,6 +7,7 @@ import json
 
 
 KITE_ACCESS_TOKEN = "kite_access_token.txt"
+ORDER_JSON = "order.json"
 
 
 
@@ -34,41 +35,45 @@ class Helper():
             tick_pe = tick_pe[0]
             if not self.price_pe:
                 self.price_pe = tick_pe['last_price']
+        else:
+            tick_pe = {'last_price': 0}
         if len(tick_ce) > 0:
             tick_ce = tick_ce[0]
             if not self.price_ce:
                 self.price_ce = tick_ce['last_price']
+        else:
+            tick_ce = {'last_price': 0}
         # first time coming with no direction
         if not direction:
             print("self.price_pe: ", self.price_pe)
             print("self.price_ce: ", self.price_ce)
-            diff_pe = tick_pe['last_price'] - self.price_pe
-            diff_ce = tick_ce['last_price'] - self.price_ce
-            print("last_price PE: ", tick_pe['last_price'])
-            print("last_price CE: ", tick_ce['last_price'])
+            diff_pe = tick_pe['last_price'] - self.price_pe if tick_pe else 0
+            diff_ce = tick_ce['last_price'] - self.price_ce if tick_ce else 0
+            # print("last_price PE: ", tick_pe['last_price'])
+            # print("last_price CE: ", tick_ce['last_price'])
             print("diff_pe PE: ", diff_pe)
             print("diff_ce CE: ", diff_ce)
             if diff_pe >= buffer:
                 last_price = tick_pe['last_price']
                 direction = 'PE'
-                self.order = last_price // 10 * 11
+                self.order = last_price // 10 * 10 + 10
                 print("PLACE ORDER: SYMBOL: ", symbol_pe, ", BUY, QUANTITY: ", quantity, ", PRICE: ",self.order)
                 self.order_id = self.place_order(symbol_pe, 'BUY', quantity, self.order)
                 conf['DIRECTION'] = direction
-                self.saveToJson(conf, KITE_ACCESS_TOKEN)
+                self.saveToJson(conf, ORDER_JSON)
             if diff_ce >= buffer:
                 last_price = tick_ce['last_price']
                 direction = 'CE'
-                self.order = last_price // 10 * 11
+                self.order = last_price // 10 * 10 + 10
                 print("PLACE ORDER: SYMBOL: ", symbol_ce, ", BUY, QUANTITY: ", quantity, ", PRICE: ",self.order)
                 self.order_id = self.place_order(symbol_ce, 'BUY', quantity, self.order)
                 conf['DIRECTION'] = direction
-                self.saveToJson(conf, KITE_ACCESS_TOKEN)
+                self.saveToJson(conf, ORDER_JSON)
 
         # if one order is placed and order id available
         if self.order_id:     
             order_history = self.kite.orders()        
-            order = list(filter(lambda x: x['order_id'] == str(self.order_id), order_history))
+            order = list(filter(lambda x: x['order_id'] == str(self.order_id), order_history))[0]
             status = order['status']
             symbol = symbol_ce if direction == 'CE' else symbol_pe
             if status == 'COMPLETE' and order['transaction_type'] == 'BUY':                
@@ -84,14 +89,15 @@ class Helper():
                 self.price_ce = tick_ce['last_price']
                 symbol = symbol_ce if direction == 'CE' else symbol_pe
                 last_price = tick_ce['last_price'] if direction == 'CE' else tick_pe['last_price']
-                self.order = last_price // 10 * 11
+                self.order = last_price // 10 * 10 + 10
                 print("PLACE ORDER: SYMBOL: ", symbol, ", BUY, QUANTITY: ", quantity, ", PRICE: ",self.order)
                 self.order_id = self.place_order(symbol, 'BUY', quantity, self.order)
-                self.saveToJson(conf, KITE_ACCESS_TOKEN)
+                self.saveToJson(conf, ORDER_JSON)
                 pass
+            last_price = tick_ce['last_price'] if direction == 'CE' else tick_pe['last_price']
             diff = last_price - self.order
             if diff >= buffer:
-                inc = ((diff//buffer) - 1 ) * 20
+                inc = ((diff//buffer) - 1 ) * buffer
                 price = self.order + inc
                 print("MODIFY ORDER: ORDER ID: ", self.order_id, ", QUANTITY: ", quantity, ", PRICE: ",price)
                 self.order_id = self.modify_order(self.order_id, quantity, price)
@@ -106,8 +112,9 @@ class Helper():
             transaction_type=self.kite.TRANSACTION_TYPE_BUY
         elif type == 'SELL':
             transaction_type=self.kite.TRANSACTION_TYPE_SELL
-        try:
-            order_id = self.kite.place_order(tradingsymbol=tradingsymbol,
+        #try:
+        print("price: ", price)
+        order_id = self.kite.place_order(tradingsymbol=tradingsymbol,
                                 exchange=self.kite.EXCHANGE_NFO,
                                 transaction_type=transaction_type,
                                 quantity=quantity,
@@ -115,11 +122,12 @@ class Helper():
                                 order_type=self.kite.ORDER_TYPE_SL,
                                 product=self.kite.PRODUCT_MIS,
                                 validity=self.kite.VALIDITY_DAY,
-                                price=price)
-            return order_id
-        except:
-            print('retrying place_order')
-            self.place_order(tradingsymbol, type, quantity, price)
+                                price=price,
+                                trigger_price=price)
+        return order_id
+        # except:
+        #     print('retrying place_order')
+        #     self.place_order(tradingsymbol, type, quantity, price)
         pass
 
     def modify_order(self, order_id,quantity,price):
@@ -148,13 +156,13 @@ class Helper():
 
 # API_KEY = "v7yjlv3s5zs83imk"
 
-# order_id = 231004602054049
+# order_id = 2
 
 
 
-# h = Helper(API_KEY)
+# h = Helper(API_KEY, None)
 
 # order_history = h.kite.orders()
 # order = list(filter(lambda x: x['order_id'] == str(order_id), order_history))
-# status = order['status']
+# status = order[0]['status']
 
